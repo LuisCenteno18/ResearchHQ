@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ResearchHQ — Astrobiology & Martian Alluvial Fans</title>
+  <meta name="description" content="6-month research organizer for dual-track research in Astrobiology and Martian Geology">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<!-- SIDEBAR -->
+<aside class="sidebar">
+  <div class="sidebar-logo">
+    <div class="logo-title">🔭 ResearchHQ</div>
+    <div class="logo-sub">6-Month Research Planner</div>
+  </div>
+  <nav class="nav">
+    <div class="nav-section">Navigation</div>
+    <div class="nav-item active" data-view="dashboard">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>
+      Dashboard
+    </div>
+    <div class="nav-item" data-view="planner">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11"/></svg>
+      Weekly Planner
+    </div>
+    <div class="nav-item" data-view="library">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 19.5A2.5 2.5 0 016.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 014 19.5v-15A2.5 2.5 0 016.5 2z"/></svg>
+      Article Library
+    </div>
+    <div class="nav-item" data-view="calendar">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg>
+      Calendar
+    </div>
+    <div class="nav-item" data-view="resources">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/></svg>
+      Resources
+    </div>
+  </nav>
+  <div class="sidebar-tracks">
+    <div class="nav-section" style="padding:0 0 8px">Research Tracks</div>
+    <div class="track-pill"><div class="track-dot" style="background:var(--astro)"></div>Astrobiology</div>
+    <div class="track-pill"><div class="track-dot" style="background:var(--mars)"></div>Martian Alluvial Fans</div>
+  </div>
+  <div class="sidebar-stats">
+    <div class="nav-section" style="padding:0 0 8px">Progress</div>
+    <div class="stat-row"><span>Tasks</span><span class="stat-val" id="stat-tasks">0/0</span></div>
+    <div class="stat-row"><span>Articles</span><span class="stat-val" id="stat-articles">0</span></div>
+    <div class="stat-row"><span>Weeks Left</span><span class="stat-val" id="stat-weeks">26/26</span></div>
+  </div>
+</aside>
+
+<!-- MAIN CONTENT -->
+<main class="main">
+
+  <!-- DASHBOARD -->
+  <section id="view-dashboard" class="view active">
+    <div class="view-header">
+      <div class="view-title">Dashboard</div>
+      <div class="view-sub">Jun 29, 2026 – Dec 26, 2026 &nbsp;·&nbsp; 26 weeks of dual-track research</div>
+    </div>
+    <div class="view-body" id="dash-body"></div>
+  </section>
+
+  <!-- PLANNER -->
+  <section id="view-planner" class="view">
+    <div class="planner-layout">
+      <div class="week-list" id="week-list"></div>
+      <div class="week-detail" id="week-detail"></div>
+    </div>
+  </section>
+
+  <!-- LIBRARY -->
+  <section id="view-library" class="view">
+    <div class="view-header">
+      <div class="view-title">Article Library</div>
+      <div class="view-sub">Upload and read research papers for both tracks</div>
+    </div>
+    <div class="view-body">
+      <div class="upload-zone" id="upload-zone">
+        <input type="file" id="file-input" multiple accept=".pdf,.txt,.md" style="display:none">
+        <div class="upload-icon">📄</div>
+        <div class="upload-text">Drag & drop articles here, or click to browse</div>
+        <div class="upload-sub">Supports PDF, TXT, and Markdown files</div>
+      </div>
+      <div class="lib-toolbar">
+        <input class="search-input" id="lib-search" placeholder="Search articles…">
+        <button class="filter-btn active" data-filter="all" onclick="setLibFilter('all')">All</button>
+        <button class="filter-btn" data-filter="astro" onclick="setLibFilter('astro')">🔭 Astrobiology</button>
+        <button class="filter-btn" data-filter="mars" onclick="setLibFilter('mars')">🪐 Martian Fans</button>
+      </div>
+      <div class="articles-grid" id="articles-grid"></div>
+    </div>
+  </section>
+
+  <!-- CALENDAR -->
+  <section id="view-calendar" class="view">
+    <div class="view-header">
+      <div class="view-title">Calendar</div>
+      <div class="view-sub">Task schedule across July – December 2026</div>
+    </div>
+    <div class="view-body">
+      <div class="cal-months" id="cal-month-tabs"></div>
+      <div class="cal-grid" id="cal-grid"></div>
+      <div style="margin-top:14px;display:flex;gap:16px;font-size:11px;color:var(--text3)">
+        <span><span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:var(--astro);margin-right:5px"></span>Astrobiology tasks</span>
+        <span><span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:var(--mars);margin-right:5px"></span>Martian Fan tasks</span>
+      </div>
+    </div>
+  </section>
+
+  <!-- RESOURCES -->
+  <section id="view-resources" class="view">
+    <div class="view-header">
+      <div class="view-title">Research Resources</div>
+      <div class="view-sub">Curated databases, datasets, and tools for both research tracks</div>
+    </div>
+    <div class="view-body" id="resources-body"></div>
+  </section>
+
+</main>
+
+<!-- ARTICLE MODAL -->
+<div class="modal-overlay" id="modal-overlay">
+  <div class="modal">
+    <div class="modal-header">
+      <span class="modal-title" id="modal-title"></span>
+      <button class="modal-close" id="modal-close">✕</button>
+    </div>
+    <div class="modal-body" id="modal-body"></div>
+  </div>
+</div>
+
+<!-- TOASTS -->
+<div class="toast-container" id="toasts"></div>
+
+<script src="data.js"></script>
+<script src="app.js"></script>
+</body>
+</html>
