@@ -517,19 +517,19 @@ function setLibFilter(f) {
   renderLibrary();
 }
 
-async function handleUpload(files) {
+async function handleUpload(files, track = 'astro') {
   for (const file of files) {
     const isText = file.type === 'text/plain' || file.name.endsWith('.txt') || file.name.endsWith('.md');
     const isPDF = file.type === 'application/pdf' || file.name.endsWith('.pdf');
     if (!isText && !isPDF) { toast(`Unsupported: ${file.name}`, 'error'); continue; }
     const id = UID();
-    const meta = { id, title: file.name.replace(/\.[^.]+$/, ''), type: isPDF ? 'pdf' : 'text', track: 'astro', tags: [], dateAdded: new Date().toISOString(), notes: '' };
+    const meta = { id, title: file.name.replace(/\.[^.]+$/, ''), type: isPDF ? 'pdf' : 'text', track, tags: [], dateAdded: new Date().toISOString(), notes: '' };
     try {
       const buf = await file.arrayBuffer();
       await ArtDB.put(id, buf);
       state.articles.push(meta);
       save();
-      toast(`Uploaded: ${meta.title}`, 'success');
+      toast(`Uploaded to ${track === 'astro' ? 'Astrobiology' : 'Martian Fans'}: ${meta.title}`, 'success');
     } catch (e) { toast(`Failed to upload ${file.name}`, 'error'); }
   }
   renderLibrary();
@@ -631,13 +631,18 @@ document.addEventListener('DOMContentLoaded', () => {
   document.querySelectorAll('.nav-item').forEach(n =>
     n.addEventListener('click', () => navigate(n.dataset.view)));
 
-  // Upload zone
-  const zone = $('upload-zone');
-  zone.addEventListener('click', () => $('file-input').click());
-  zone.addEventListener('dragover', e => { e.preventDefault(); zone.classList.add('dragover'); });
-  zone.addEventListener('dragleave', () => zone.classList.remove('dragover'));
-  zone.addEventListener('drop', e => { e.preventDefault(); zone.classList.remove('dragover'); handleUpload([...e.dataTransfer.files]); });
-  $('file-input').addEventListener('change', e => handleUpload([...e.target.files]));
+  // Upload zones (one per track)
+  function setupZone(zoneId, inputId, track) {
+    const zone = $(zoneId);
+    const input = $(inputId);
+    zone.addEventListener('click', () => input.click());
+    zone.addEventListener('dragover', e => { e.preventDefault(); zone.classList.add('dragover'); });
+    zone.addEventListener('dragleave', () => zone.classList.remove('dragover'));
+    zone.addEventListener('drop', e => { e.preventDefault(); zone.classList.remove('dragover'); handleUpload([...e.dataTransfer.files], track); });
+    input.addEventListener('change', e => { handleUpload([...e.target.files], track); input.value = ''; });
+  }
+  setupZone('upload-zone-astro', 'file-input-astro', 'astro');
+  setupZone('upload-zone-mars', 'file-input-mars', 'mars');
 
   // Modal close
   $('modal-close').addEventListener('click', () => $('modal-overlay').classList.remove('open'));

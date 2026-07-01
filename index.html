@@ -75,15 +75,31 @@
   <section id="view-library" class="view">
     <div class="view-header">
       <div class="view-title">Article Library</div>
-      <div class="view-sub">Upload and read research papers for both tracks</div>
+      <div class="view-sub">Upload research papers directly into each track</div>
     </div>
     <div class="view-body">
-      <div class="upload-zone" id="upload-zone">
-        <input type="file" id="file-input" multiple accept=".pdf,.txt,.md" style="display:none">
-        <div class="upload-icon">📄</div>
-        <div class="upload-text">Drag & drop articles here, or click to browse</div>
-        <div class="upload-sub">Supports PDF, TXT, and Markdown files</div>
+      <!-- Dual upload zones -->
+      <div class="upload-dual">
+        <!-- Astrobiology zone -->
+        <div class="upload-zone upload-zone-astro" id="upload-zone-astro">
+          <input type="file" id="file-input-astro" multiple accept=".pdf,.txt,.md" style="display:none">
+          <div class="upload-zone-badge badge-astro">ASTROBIOLOGY</div>
+          <div class="upload-icon">🔭</div>
+          <div class="upload-text">Drag &amp; drop here</div>
+          <div class="upload-sub">or click to browse</div>
+          <div class="upload-sub">PDF, TXT, Markdown</div>
+        </div>
+        <!-- Martian Fans zone -->
+        <div class="upload-zone upload-zone-mars" id="upload-zone-mars">
+          <input type="file" id="file-input-mars" multiple accept=".pdf,.txt,.md" style="display:none">
+          <div class="upload-zone-badge badge-mars">MARTIAN FANS</div>
+          <div class="upload-icon">🪐</div>
+          <div class="upload-text">Drag &amp; drop here</div>
+          <div class="upload-sub">or click to browse</div>
+          <div class="upload-sub">PDF, TXT, Markdown</div>
+        </div>
       </div>
+      <!-- Toolbar -->
       <div class="lib-toolbar">
         <input class="search-input" id="lib-search" placeholder="Search articles…">
         <button class="filter-btn active" data-filter="all" onclick="setLibFilter('all')">All</button>

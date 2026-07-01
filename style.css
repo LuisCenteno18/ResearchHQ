@@ -191,14 +191,29 @@ body { font-family: 'Inter', sans-serif; background: var(--bg); color: var(--tex
 }
 
 /* LIBRARY */
+.upload-dual { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 20px; }
 .upload-zone {
-  border: 2px dashed var(--border); border-radius: var(--radius); padding: 36px;
-  text-align: center; cursor: pointer; transition: all var(--trans); margin-bottom: 20px;
+  border: 2px dashed var(--border); border-radius: var(--radius); padding: 32px 20px;
+  text-align: center; cursor: pointer; transition: all var(--trans); position: relative;
+  display: flex; flex-direction: column; align-items: center; gap: 4px;
 }
-.upload-zone:hover, .upload-zone.dragover { border-color: var(--accent); background: var(--accent-dim); }
-.upload-icon { font-size: 32px; margin-bottom: 8px; }
-.upload-text { font-size: 13px; color: var(--text2); }
-.upload-sub { font-size: 11px; color: var(--text3); margin-top: 4px; }
+.upload-zone-badge {
+  font-size: 9px; font-weight: 700; letter-spacing: 1px; padding: 3px 10px;
+  border-radius: 20px; margin-bottom: 8px;
+}
+.upload-zone-astro { border-color: rgba(103,196,232,0.25); }
+.upload-zone-astro:hover, .upload-zone-astro.dragover {
+  border-color: var(--astro); background: var(--astro-dim);
+  box-shadow: 0 0 24px rgba(103,196,232,0.08);
+}
+.upload-zone-mars { border-color: rgba(232,144,90,0.25); }
+.upload-zone-mars:hover, .upload-zone-mars.dragover {
+  border-color: var(--mars); background: var(--mars-dim);
+  box-shadow: 0 0 24px rgba(232,144,90,0.08);
+}
+.upload-icon { font-size: 30px; margin-bottom: 4px; }
+.upload-text { font-size: 13px; font-weight: 600; color: var(--text); }
+.upload-sub { font-size: 11px; color: var(--text3); margin-top: 2px; }
 .articles-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 14px; }
 .article-card {
   background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius);
