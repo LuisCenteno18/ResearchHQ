@@ -11,6 +11,42 @@ const Storage = {
   }
 };
 
+// ── Theme ────────────────────────────────────────────────────────────────────
+function initTheme() {
+  const theme = localStorage.getItem('researchHQ_theme') || 'dark';
+  document.documentElement.setAttribute('data-theme', theme);
+  const track = $('toggle-track');
+  const label = $('theme-toggle-label');
+  if (track && label) {
+    if (theme === 'light') {
+      track.classList.add('on');
+      label.textContent = '🌙 Dark Mode';
+    } else {
+      track.classList.remove('on');
+      label.textContent = '☀️ Light Mode';
+    }
+  }
+}
+
+function toggleTheme() {
+  const isLight = document.documentElement.getAttribute('data-theme') === 'light';
+  const newTheme = isLight ? 'dark' : 'light';
+  document.documentElement.setAttribute('data-theme', newTheme);
+  localStorage.setItem('researchHQ_theme', newTheme);
+  
+  const track = $('toggle-track');
+  const label = $('theme-toggle-label');
+  if (track && label) {
+    if (newTheme === 'light') {
+      track.classList.add('on');
+      label.textContent = '🌙 Dark Mode';
+    } else {
+      track.classList.remove('on');
+      label.textContent = '☀️ Light Mode';
+    }
+  }
+}
+
 // ── IndexedDB (articles) ──────────────────────────────────────────────────────
 const ArtDB = {
   _db: null,
@@ -48,12 +84,18 @@ const ArtDB = {
 };
 
 // ── App State ─────────────────────────────────────────────────────────────────
-let state = { weeks: [], articles: [], activeView: 'dashboard', selectedWeek: 1 };
+let state = { weeks: [], articles: [], calEvents: null, activeView: 'dashboard', selectedWeek: 1 };
 
 function initState() {
   const saved = Storage.load();
   if (saved) { state = { ...state, ...saved }; }
   else { state.weeks = generateDefaultWeeks(); Storage.save(state); }
+  
+  if (!state.calEvents) {
+    state.calEvents = CAL_EVENTS.map(ev => ({ ...ev, id: UID() }));
+    Storage.save(state);
+  }
+
   const today = new Date();
   for (let i = 0; i < state.weeks.length; i++) {
     const w = state.weeks[i];
@@ -63,7 +105,7 @@ function initState() {
   }
 }
 
-function save() { Storage.save({ weeks: state.weeks, articles: state.articles }); }
+function save() { Storage.save({ weeks: state.weeks, articles: state.articles, calEvents: state.calEvents }); }
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 const $ = id => document.getElementById(id);
@@ -399,6 +441,14 @@ function renderWeekDetail() {
       ${tasks.map(t => renderTaskItem(t, w.weekNum)).join('')}
     </div>`;
   });
+  let resourceOpts = '<option value="">-- Link Resource (Optional) --</option>';
+  RESOURCES.forEach(cat => {
+    resourceOpts += `<optgroup label="${cat.category}">`;
+    cat.items.forEach(res => {
+      resourceOpts += `<option value="${res.url}">${res.name.replace(/"/g, '&quot;')}</option>`;
+    });
+    resourceOpts += `</optgroup>`;
+  });
 
   detail.innerHTML = `
     <div class="flex items-center justify-between" style="margin-bottom:16px">
@@ -425,6 +475,9 @@ function renderWeekDetail() {
         <option value="medium" selected>Medium</option>
         <option value="low">Low</option>
       </select>
+      <select id="new-task-resource" class="resource-select" style="max-width: 160px;">
+        ${resourceOpts}
+      </select>
       <button class="btn btn-primary" onclick="addTask()">Add</button>
     </div>
     <div class="week-notes">
@@ -438,11 +491,15 @@ function renderTaskItem(t, weekNum) {
   const done = t.done ? ' done' : '';
   const doneText = t.done ? ' done-text' : '';
   const pri = `<span class="badge badge-${t.priority}" style="font-size:9px">${t.priority}</span>`;
+  const resLink = t.resourceUrl ? `<a href="${t.resourceUrl}" target="_blank" class="task-res-link" title="${t.resourceName}">🔗</a>` : '';
   return `<div class="task-item${done}" id="task-${t.id}">
     <div class="task-check${chk}" onclick="toggleTask('${t.id}',${weekNum})" title="Toggle done">
       ${t.done ? '<svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="3"><path d="M20 6L9 17l-5-5"/></svg>' : ''}
     </div>
-    <textarea class="task-text${doneText}" rows="1" onblur="updateTask('${t.id}',${weekNum},this.value)" oninput="autoResize(this)">${t.text}</textarea>
+    <div class="flex items-center gap-2" style="flex:1; min-width:0">
+      <textarea class="task-text${doneText}" rows="1" onblur="updateTask('${t.id}',${weekNum},this.value)" oninput="autoResize(this)">${t.text}</textarea>
+      ${resLink}
+    </div>
     <div class="task-actions">
       ${pri}
       <button class="btn btn-danger btn-icon btn-sm" onclick="deleteTask('${t.id}',${weekNum})" title="Delete">✕</button>
@@ -474,7 +531,18 @@ function addTask() {
   if (!text) return;
   const w = state.weeks.find(x => x.weekNum === state.selectedWeek);
   if (!w) return;
-  w.tasks.push({ id: UID(), track: $('new-task-track').value, text, priority: $('new-task-priority').value, done: false });
+  const resSelect = $('new-task-resource');
+  const resourceUrl = resSelect.value;
+  const resourceName = resourceUrl ? resSelect.options[resSelect.selectedIndex].text : '';
+  w.tasks.push({ 
+    id: UID(), 
+    track: $('new-task-track').value, 
+    text, 
+    priority: $('new-task-priority').value, 
+    done: false,
+    resourceUrl,
+    resourceName
+  });
   $('new-task-text').value = '';
   save(); renderWeekList(); renderWeekDetail(); updateSidebarStats();
   toast('Task added', 'success');
@@ -489,26 +557,65 @@ function saveNotes(val, weekNum) {
 let libFilter = 'all';
 
 function renderLibrary() {
-  const filtered = libFilter === 'all' ? state.articles : state.articles.filter(a => a.track === libFilter);
-  const grid = $('articles-grid');
-  if (!filtered.length) {
-    grid.innerHTML = `<div class="empty-state" style="grid-column:1/-1"><div class="empty-state-icon">📄</div><div class="empty-state-text">No articles yet</div><div class="empty-state-sub">Upload PDFs or text files above</div></div>`;
-    return;
+  const container = $('articles-grid');
+  const all = state.articles;
+
+  // When a filter is active, show only matching track but still in two-column layout
+  const astroArticles = all.filter(a => a.track === 'astro' || a.track === 'both');
+  const marsArticles  = all.filter(a => a.track === 'mars'  || a.track === 'both');
+
+  const showAstro = libFilter === 'all' || libFilter === 'astro';
+  const showMars  = libFilter === 'all' || libFilter === 'mars';
+
+  function articleCard(a) {
+    const icon = a.type === 'pdf' ? '📄' : '📝';
+    return `
+      <div class="article-card">
+        <div class="article-card-icon">${icon}</div>
+        <div class="article-card-main">
+          <div class="article-title">${a.title}</div>
+          <div class="article-meta">${new Date(a.dateAdded).toLocaleDateString()}${a.tags.length ? ' · ' + a.tags.join(', ') : ''}</div>
+        </div>
+        <div class="article-actions">
+          <button class="btn btn-ghost btn-sm" onclick="openArticle('${a.id}')">📖</button>
+          <button class="btn btn-danger btn-sm" onclick="deleteArticle('${a.id}')">✕</button>
+        </div>
+      </div>`;
   }
-  grid.innerHTML = filtered.map(a => `
-    <div class="article-card">
-      <div class="flex items-center gap-2" style="margin-bottom:8px">
-        <span class="badge badge-${a.track==='both'?'both':a.track==='astro'?'astro':'mars'}">${a.track==='astro'?'Astrobiology':a.track==='mars'?'Martian Fans':'Both'}</span>
-        <span style="font-size:10px;color:var(--text3);margin-left:auto">${a.type.toUpperCase()}</span>
-      </div>
-      <div class="article-title">${a.title}</div>
-      <div class="article-meta">${new Date(a.dateAdded).toLocaleDateString()}</div>
-      ${a.tags.length?`<div class="article-tags">${a.tags.map(t=>`<span class="tag">${t}</span>`).join('')}</div>`:''}
-      <div class="article-actions">
-        <button class="btn btn-ghost btn-sm" onclick="openArticle('${a.id}')">📖 Read</button>
-        <button class="btn btn-danger btn-sm" onclick="deleteArticle('${a.id}')">Delete</button>
-      </div>
-    </div>`).join('');
+
+  function column(track, articles, show) {
+    const isAstro = track === 'astro';
+    const color   = isAstro ? 'var(--astro)' : 'var(--mars)';
+    const label   = isAstro ? '🔭 Astrobiology' : '🪐 Martian Fans';
+    const emptyMsg = isAstro
+      ? 'Drop papers into the Astrobiology zone above'
+      : 'Drop papers into the Martian Fans zone above';
+
+    return `
+      <div class="lib-col ${show ? '' : 'hidden'}">
+        <div class="lib-col-header">
+          <span class="lib-col-title" style="color:${color}">${label}</span>
+          <span class="lib-col-count">${articles.length} article${articles.length !== 1 ? 's' : ''}</span>
+        </div>
+        <div class="lib-col-body">
+          ${articles.length
+            ? articles.map(articleCard).join('')
+            : `<div class="empty-state"><div class="empty-state-icon">${isAstro ? '🔭' : '🪐'}</div><div class="empty-state-text">No articles yet</div><div class="empty-state-sub">${emptyMsg}</div></div>`
+          }
+        </div>
+      </div>`;
+  }
+
+  const colsStyle = showAstro && showMars 
+    ? `grid-template-columns: minmax(0, var(--split-left, 1fr)) 6px minmax(0, var(--split-right, 1fr));`
+    : `grid-template-columns: 1fr;`;
+
+  container.innerHTML = `
+    <div class="lib-cols" id="lib-cols" style="${colsStyle}">
+      ${showAstro ? column('astro', astroArticles, true) : ''}
+      ${showAstro && showMars ? `<div class="lib-resizer" id="lib-resizer"></div>` : ''}
+      ${showMars ? column('mars', marsArticles, true) : ''}
+    </div>`;
 }
 
 function setLibFilter(f) {
@@ -565,18 +672,176 @@ async function deleteArticle(id) {
 
 // ── Calendar ──────────────────────────────────────────────────────────────────
 let calMonth = 6; // July = month index 6 (0-based)
+const CAL_EVENTS = [
+  { start: '2026-06-22', text: 'online 21h SRI webinar Jan Woerner' },
+  { start: '2026-06-23', text: 'ISU Illkirch 14h TP Team Projects Final' },
+  { start: '2026-06-24', text: '10h ISU LUNEX / 14h BBQ' },
+  { start: '2026-06-25', text: 'depart for Nancy ELS Lunar' },
+  { start: '2026-06-26', text: 'Leiden meetings' },
+  { start: '2026-06-29', text: 'Leiden U / deadline abstracts' },
+  { start: '2026-06-30', text: 'Delft TU 13h / SRI Congress' },
+  { start: '2026-07-01', text: 'LUNEX ISU academy internships' },
+  { start: '2026-07-02', text: '11h00 Leiden U / Eurobusiness' },
+  { start: '2026-07-03', text: '10h DSEL / pm Noordwijk BIC' },
+  { start: '2026-07-04', text: '11h LuMa ship' },
+  { start: '2026-07-05', text: '15h Delft Oude Kerk' },
+  { start: '2026-07-06', text: 'ExoSpaceHab tests' },
+  { start: '2026-07-07', text: '12h Delft explo labs' },
+  { start: '2026-07-08', text: 'travel EMMPOL27' },
+  { start: '2026-07-09', end: '2026-07-16', text: 'EMMPOL27 Campaign AATC' },
+  { start: '2026-07-11', text: '16h Was dorpskerk, 18h Alliance francaise' },
+  { start: '2026-07-14', text: 'French national day celebration' },
+  { start: '2026-07-15', text: 'Leiden U TW3' },
+  { start: '2026-07-16', text: 'Leiden U TW3 / Noordwijk SBIC' },
+  { start: '2026-07-17', end: '2026-07-18', text: 'London E-SGAC W' },
+  { start: '2026-07-20', text: 'Lunar gradcon' },
+  { start: '2026-07-21', text: 'Vrushali & SSERVi NESF' },
+  { start: '2026-07-23', text: 'Toulouse IRAP' },
+  { start: '2026-07-23', end: '2026-07-31', text: 'EMMPOL 28 AATC' },
+  { start: '2026-07-24', end: '2026-07-25', text: 'Pic du Midi observatory' },
+  { start: '2026-07-26', text: 'Toulouse icebreaker' },
+  { start: '2026-07-27', end: '2026-07-31', text: 'Leiden COSPAR prep' },
+  { start: '2026-07-31', text: '17h AMS-Florence BF flight' },
+  { start: '2026-08-01', end: '2026-08-09', text: 'Firenze COSPAR' },
+  { start: '2026-08-09', end: '2026-08-10', text: 'eclipse tests Alicante' },
+  { start: '2026-08-11', text: 'proceed to eclipse sites' },
+  { start: '2026-08-12', text: 'eclipse day (totality 20h CEST)' },
+  { start: '2026-08-13', text: 'return from eclipse' },
+  { start: '2026-08-17', text: 'BF in Paris' },
+  { start: '2026-08-18', end: '2026-08-24', text: 'BF in NL' },
+  { start: '2026-08-19', text: 'LUNEX internship preliminary review' },
+  { start: '2026-08-26', end: '2026-08-27', text: 'Venice Space Science' },
+  { start: '2026-08-27', end: '2026-09-05', text: 'Deep Space Conf Hefei' },
+  { start: '2026-09-01', text: 'EANA Neuchatel' },
+  { start: '2026-09-06', text: 'EPSC grad/LUNEX pre-event' },
+  { start: '2026-09-07', end: '2026-09-11', text: 'Hague EPSC' },
+  { start: '2026-09-11', text: '18h Paris SGAC France' },
+  { start: '2026-09-12', text: 'Paris Ivry IPSA SGAC' },
+  { start: '2026-09-13', text: 'Paris LUEX ISU social' },
+  { start: '2026-09-14', text: 'return Leiden' },
+  { start: '2026-09-15', end: '2026-09-17', text: 'ESTEC industry day / Purdue LEAG' },
+  { start: '2026-09-17', text: 'Comet lab YPSAT' },
+  { start: '2026-09-18', text: 'LUNEX internship mid-term review' },
+  { start: '2026-09-21', end: '2026-09-24', text: 'ESTEC ESLAB Heliophysics' },
+  { start: '2026-09-26', end: '2026-09-27', text: 'ESTEC open day' },
+  { start: '2026-09-28', end: '2026-09-30', text: 'Dubai (GEGSLA)' },
+  { start: '2026-09-28', text: 'Budapest Climate change' },
+  { start: '2026-10-01', end: '2026-10-03', text: 'Antalya SGC' },
+  { start: '2026-10-03', end: '2026-10-04', text: 'UN-IAF space tech' },
+  { start: '2026-10-05', end: '2026-10-10', text: 'Antalya IAC' },
+  { start: '2026-10-11', end: '2026-10-15', text: 'Pretoria ISTVS robotics' },
+  { start: '2026-10-14', end: '2026-10-16', text: 'Geneva Science Diplomacy' },
+  { start: '2026-10-21', end: '2026-10-23', text: 'ESTEC SPAICE space AI' },
+  { start: '2026-10-22', end: '2026-10-24', text: 'LA Mars convention / Bangkok MVA' },
+  { start: '2026-10-23', text: 'LUNEX internship consolidation review' },
+  { start: '2026-10-30', text: 'Toulouse Cite de l espace' },
+  { start: '2026-11-03', end: '2026-11-06', text: 'Cologne iSPare SAIRAS' },
+  { start: '2026-11-13', text: 'LUNEX internship publications review' },
+  { start: '2026-11-16', end: '2026-11-19', text: 'IpSpace Hainan' },
+  { start: '2026-11-23', end: '2026-11-29', text: 'Hongkong Macau collaboration' },
+  { start: '2026-12-01', end: '2026-12-03', text: 'Helsinki Space economy Forum' },
+  { start: '2026-12-07', end: '2026-12-11', text: 'AGU San Francisco' },
+  { start: '2026-12-11', text: 'LUNEX internship launch readiness' },
+  { start: '2026-12-14', end: '2026-12-15', text: 'Leiden EuroSpaceHub workshop' },
+  { start: '2026-12-16', text: 'BepiC Mercury orbit insertion' }
+];
+
+let calYear = new Date().getFullYear();
 
 function renderCalendar() {
-  const months = ['July','August','September','October','November','December'];
-  $('cal-month-tabs').innerHTML = months.map((m, i) =>
-    `<div class="month-tab${calMonth===i+6?' active':''}" onclick="setCalMonth(${i+6})">${m}</div>`).join('');
+  const months = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+  $('cal-month-tabs').innerHTML = `
+    <div style="display:flex; align-items:center; gap:16px; width:100%;">
+      <button class="btn btn-ghost btn-sm" onclick="changeCalMonth(-1)">&#8592; Prev</button>
+      <div style="font-size:16px; font-weight:600; min-width:160px; text-align:center;">${months[calMonth]} ${calYear}</div>
+      <button class="btn btn-ghost btn-sm" onclick="changeCalMonth(1)">Next &#8594;</button>
+      <button class="btn btn-ghost btn-sm" onclick="calMonth=new Date().getMonth(); calYear=new Date().getFullYear(); renderCalendar();" style="margin-left:auto">Today</button>
+    </div>
+  `;
   renderCalGrid();
 }
 
-function setCalMonth(m) { calMonth = m; renderCalendar(); }
+function changeCalMonth(delta) {
+  calMonth += delta;
+  if (calMonth > 11) { calMonth = 0; calYear++; }
+  if (calMonth < 0) { calMonth = 11; calYear--; }
+  renderCalendar();
+}
+
+function openCalModal(id, dateStr) {
+  const modal = $('cal-modal-overlay');
+  const title = $('cal-modal-title');
+  const delBtn = $('cal-ev-delete');
+  
+  if (id) {
+    const ev = state.calEvents.find(e => e.id === id);
+    if (!ev) return;
+    $('cal-ev-id').value = ev.id;
+    $('cal-ev-start').value = ev.start;
+    $('cal-ev-end').value = ev.end || '';
+    $('cal-ev-text').value = ev.text;
+    title.textContent = 'Edit Event';
+    delBtn.style.display = 'block';
+  } else {
+    $('cal-ev-id').value = '';
+    $('cal-ev-start').value = dateStr || '';
+    $('cal-ev-end').value = '';
+    $('cal-ev-text').value = '';
+    title.textContent = 'Add Event';
+    delBtn.style.display = 'none';
+  }
+  
+  modal.classList.add('open');
+}
+
+function closeCalModal() {
+  $('cal-modal-overlay').classList.remove('open');
+}
+
+function saveCalEvent() {
+  const id = $('cal-ev-id').value;
+  const start = $('cal-ev-start').value;
+  let end = $('cal-ev-end').value;
+  const text = $('cal-ev-text').value.trim();
+  
+  if (!start || !text) {
+    toast('Start date and text are required', 'error');
+    return;
+  }
+  
+  if (end && new Date(end) < new Date(start)) {
+    end = ''; // Ignore invalid end date
+  }
+
+  if (id) {
+    const ev = state.calEvents.find(e => e.id === id);
+    if (ev) {
+      ev.start = start;
+      ev.end = end;
+      ev.text = text;
+    }
+  } else {
+    state.calEvents.push({ id: UID(), start, end, text });
+  }
+  
+  save();
+  renderCalendar();
+  closeCalModal();
+  toast('Event saved', 'success');
+}
+
+function deleteCalEvent() {
+  const id = $('cal-ev-id').value;
+  if (!id) return;
+  state.calEvents = state.calEvents.filter(e => e.id !== id);
+  save();
+  renderCalendar();
+  closeCalModal();
+  toast('Event deleted', 'info');
+}
 
 function renderCalGrid() {
-  const year = 2026;
+  const year = calYear;
   const firstDay = new Date(year, calMonth, 1).getDay();
   const daysInMonth = new Date(year, calMonth + 1, 0).getDate();
   const today = new Date();
@@ -593,19 +858,30 @@ function renderCalGrid() {
     }
   }));
 
+  // Build event map: date string → events[]
+  const eventMap = {};
+  if (state.calEvents) {
+    state.calEvents.forEach(ev => {
+      const s = new Date(ev.start), e = ev.end ? new Date(ev.end) : s;
+      for (let d = new Date(s); d <= e; d.setDate(d.getDate() + 1)) {
+        const key = d.toISOString().slice(0, 10);
+        if (!eventMap[key]) eventMap[key] = [];
+        eventMap[key].push(ev);
+      }
+    });
+  }
+
   let html = days.map(d => `<div class="cal-day-header">${d}</div>`).join('');
   for (let i = 0; i < firstDay; i++) html += `<div class="cal-day empty"></div>`;
   for (let d = 1; d <= daysInMonth; d++) {
     const dateStr = `${year}-${String(calMonth+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
     const isToday = today.getFullYear()===year && today.getMonth()===calMonth && today.getDate()===d;
     const tasks = taskMap[dateStr] || [];
-    const astroDots = tasks.filter(t=>t.track==='astro'||t.track==='both').length;
-    const marsDots = tasks.filter(t=>t.track==='mars'||t.track==='both').length;
-    html += `<div class="cal-day${isToday?' today':''}" title="${tasks.length} tasks">
+    const evs = eventMap[dateStr] || [];
+    html += `<div class="cal-day${isToday?' today':''}" title="${tasks.length} tasks" onclick="openCalModal(null, '${dateStr}')">
       <div class="cal-day-num">${d}</div>
-      <div class="cal-dots">
-        ${astroDots?`<div class="cal-dot" style="background:var(--astro)" title="${astroDots} astrobiology tasks"></div>`:''}
-        ${marsDots?`<div class="cal-dot" style="background:var(--mars)" title="${marsDots} Mars tasks"></div>`:''}
+      <div style="margin-top:4px">
+        ${evs.map(ev => `<div class="cal-task-chip" style="background:var(--surface2);border:1px solid var(--border);color:var(--text2)" title="${ev.text}" onclick="event.stopPropagation(); openCalModal('${ev.id}')">${ev.text}</div>`).join('')}
       </div>
     </div>`;
   }
@@ -630,6 +906,52 @@ document.addEventListener('DOMContentLoaded', () => {
   // Nav
   document.querySelectorAll('.nav-item').forEach(n =>
     n.addEventListener('click', () => navigate(n.dataset.view)));
+
+  // Splitter logic
+  let isResizing = false;
+  document.addEventListener('mousedown', e => {
+    if (e.target.id === 'lib-resizer') {
+      isResizing = true;
+      e.target.classList.add('active');
+      document.body.style.cursor = 'col-resize';
+      document.body.style.userSelect = 'none';
+    }
+  });
+  document.addEventListener('mousemove', e => {
+    if (!isResizing) return;
+    const container = $('lib-cols');
+    if (!container) return;
+    const rect = container.getBoundingClientRect();
+    const x = e.clientX - rect.left;
+    let pct = (x / rect.width) * 100;
+    if (pct < 15) pct = 15;
+    if (pct > 85) pct = 85;
+    document.documentElement.style.setProperty('--split-left', `${pct}fr`);
+    document.documentElement.style.setProperty('--split-right', `${100 - pct}fr`);
+  });
+  document.addEventListener('mouseup', () => {
+    if (isResizing) {
+      isResizing = false;
+      const resizer = $('lib-resizer');
+      if (resizer) resizer.classList.remove('active');
+      document.body.style.cursor = '';
+      document.body.style.userSelect = '';
+      
+      // Save split preference to localStorage
+      const splitLeft = document.documentElement.style.getPropertyValue('--split-left');
+      const splitRight = document.documentElement.style.getPropertyValue('--split-right');
+      localStorage.setItem('researchHQ_split', JSON.stringify({ left: splitLeft, right: splitRight }));
+    }
+  });
+  
+  // Load saved split
+  try {
+    const savedSplit = JSON.parse(localStorage.getItem('researchHQ_split'));
+    if (savedSplit) {
+      document.documentElement.style.setProperty('--split-left', savedSplit.left);
+      document.documentElement.style.setProperty('--split-right', savedSplit.right);
+    }
+  } catch(e) {}
 
   // Upload zones (one per track)
   function setupZone(zoneId, inputId, track) {
@@ -656,5 +978,6 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   });
 
+  initTheme();
   navigate('dashboard');
 });

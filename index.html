@@ -49,6 +49,12 @@
     <div class="stat-row"><span>Articles</span><span class="stat-val" id="stat-articles">0</span></div>
     <div class="stat-row"><span>Weeks Left</span><span class="stat-val" id="stat-weeks">26/26</span></div>
   </div>
+  <div class="theme-toggle" id="theme-toggle-row">
+    <span class="theme-toggle-label" id="theme-toggle-label">☀️ Light Mode</span>
+    <div class="toggle-track" id="toggle-track" onclick="toggleTheme()">
+      <div class="toggle-thumb"></div>
+    </div>
+  </div>
 </aside>
 
 <!-- MAIN CONTENT -->
@@ -136,7 +142,37 @@
   </section>
 
 </main>
-
+<!-- CALENDAR MODAL -->
+<div class="modal-overlay" id="cal-modal-overlay">
+  <div class="modal" style="max-width:400px; padding: 0;">
+    <div class="modal-header">
+      <span class="modal-title" id="cal-modal-title">Edit Event</span>
+      <button class="modal-close" onclick="closeCalModal()">✕</button>
+    </div>
+    <div class="modal-body" style="padding:16px;">
+      <input type="hidden" id="cal-ev-id">
+      <div class="form-group">
+        <label class="form-label">Date (Start)</label>
+        <input type="date" id="cal-ev-start" class="input-field">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Date (End) - Optional</label>
+        <input type="date" id="cal-ev-end" class="input-field">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Event Text</label>
+        <input type="text" id="cal-ev-text" class="input-field" placeholder="E.g., Congress in Milan">
+      </div>
+    </div>
+    <div class="modal-footer" style="justify-content: space-between; display: flex;">
+      <button class="btn btn-danger" id="cal-ev-delete" onclick="deleteCalEvent()">Delete</button>
+      <div style="display: flex; gap: 8px;">
+        <button class="btn btn-ghost" onclick="closeCalModal()">Cancel</button>
+        <button class="btn btn-primary" onclick="saveCalEvent()">Save</button>
+      </div>
+    </div>
+  </div>
+</div>
 <!-- ARTICLE MODAL -->
 <div class="modal-overlay" id="modal-overlay">
   <div class="modal">
