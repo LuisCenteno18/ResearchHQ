@@ -3,6 +3,20 @@
 const AUTHORIZED_EMAIL = 'zecalanga12@gmail.com'; // only this user can edit
 let isEditor = false;
 
+const observer = new MutationObserver(() => {
+  if (window.lucide) {
+    observer.disconnect();
+    lucide.createIcons();
+    document.querySelectorAll('svg[data-lucide]').forEach(el => el.removeAttribute('data-lucide'));
+    observer.observe(document.body, { childList: true, subtree: true });
+  }
+});
+if (window.lucide) {
+  lucide.createIcons();
+  document.querySelectorAll('svg[data-lucide]').forEach(el => el.removeAttribute('data-lucide'));
+}
+observer.observe(document.body, { childList: true, subtree: true });
+
 function signIn() {
   const provider = new firebase.auth.GoogleAuthProvider();
   auth.signInWithPopup(provider).catch(e => toast('Sign-in failed: ' + e.message, 'error'));
@@ -20,9 +34,9 @@ function updateAuthUI(user) {
     isEditor = user.email === AUTHORIZED_EMAIL;
     out.style.display = 'none';
     inn.style.display = 'flex';
-    mail.textContent = '✏️ ' + user.email;
+    mail.innerHTML = '<i data-lucide="pen-line" class="icon-sm"></i> ' + user.email;
     if (!isEditor) {
-      mail.textContent = '👁 Viewing as ' + user.email;
+      mail.innerHTML = '<i data-lucide="eye" class="icon-sm"></i> Viewing as ' + user.email;
     }
   } else {
     isEditor = false;
@@ -87,10 +101,10 @@ function initTheme() {
   if (track && label) {
     if (theme === 'light') {
       track.classList.add('on');
-      label.textContent = '🌙 Dark Mode';
+      label.innerHTML = '<i data-lucide="moon" class="icon-sm"></i> Dark Mode';
     } else {
       track.classList.remove('on');
-      label.textContent = '☀️ Light Mode';
+      label.innerHTML = '<i data-lucide="sun" class="icon-sm"></i> Light Mode';
     }
   }
 }
@@ -106,10 +120,10 @@ function toggleTheme() {
   if (track && label) {
     if (newTheme === 'light') {
       track.classList.add('on');
-      label.textContent = '🌙 Dark Mode';
+      label.innerHTML = '<i data-lucide="moon" class="icon-sm"></i> Dark Mode';
     } else {
       track.classList.remove('on');
-      label.textContent = '☀️ Light Mode';
+      label.innerHTML = '<i data-lucide="sun" class="icon-sm"></i> Light Mode';
     }
   }
 }
@@ -207,7 +221,7 @@ function ring(pct, color) {
 const RESOURCES = [
   {
     category: 'Astrobiology Databases & Catalogues',
-    icon: '🔭',
+    icon: '<i data-lucide="telescope" class="icon-sm"></i>',
     desc: 'Primary repositories and data portals specifically for astrobiology research',
     items: [
       { name: 'NASA Astrobiology Habitable Environments Database (AHED)', url: 'https://ahed.nasa.gov/', desc: 'NASA-funded open-access repository for astrobiology data using the ARMS metadata standard. Bridges geology, biology, chemistry and planetary science datasets.', track: 'astro', tags: ['NASA', 'Open Access', 'Data Repository'] },
@@ -254,7 +268,7 @@ const RESOURCES = [
   },
   {
     category: 'Mars Imagery & Remote Sensing Data',
-    icon: '🪐',
+    icon: '<i data-lucide="globe" class="icon-sm"></i>',
     desc: 'Portals to access HiRISE, CTX, CRISM, and other MRO datasets for alluvial fan analysis',
     items: [
       { name: 'PDS Geosciences Node — Mars Orbital Data Explorer (ODE)', url: 'https://ode.rsl.wustl.edu/mars/', desc: 'Most comprehensive tool for searching and downloading MRO data including CRISM, HiRISE, and CTX. Offers map-based searches and shopping-cart downloads.', track: 'mars', tags: ['HiRISE', 'CTX', 'CRISM', 'PDS'] },
@@ -329,8 +343,8 @@ function renderResources() {
   body.innerHTML = `
     <div class="res-filter-bar">
       <button class="filter-btn${resFilter==='all'?' active':''}" onclick="setResFilter('all')">All Resources</button>
-      <button class="filter-btn${resFilter==='astro'?' active':''}" onclick="setResFilter('astro')">🔭 Astrobiology</button>
-      <button class="filter-btn${resFilter==='mars'?' active':''}" onclick="setResFilter('mars')">🪐 Martian Fans</button>
+      <button class="filter-btn${resFilter==='astro'?' active':''}" onclick="setResFilter('astro')"><i data-lucide="telescope" class="icon-sm"></i> Astrobiology</button>
+      <button class="filter-btn${resFilter==='mars'?' active':''}" onclick="setResFilter('mars')"><i data-lucide="globe" class="icon-sm"></i> Martian Fans</button>
     </div>
     ${filtered.map(cat => `
       <div class="res-category">
@@ -556,8 +570,8 @@ function renderWeekDetail() {
     <div class="add-task-row">
       <input id="new-task-text" class="add-task-input" placeholder="Add a new task…" onkeydown="if(event.key==='Enter')addTask()">
       <select id="new-task-track" class="track-select">
-        <option value="astro">🔭 Astrobiology</option>
-        <option value="mars">🪐 Martian Fans</option>
+        <option value="astro"><i data-lucide="telescope" class="icon-sm"></i> Astrobiology</option>
+        <option value="mars"><i data-lucide="globe" class="icon-sm"></i> Martian Fans</option>
         <option value="both">🌍 Both</option>
       </select>
       <select id="new-task-priority" class="priority-select">
@@ -776,7 +790,7 @@ function renderLibrary() {
   const showMars  = libFilter === 'all' || libFilter === 'mars';
 
   function articleCard(a) {
-    const icon = a.type === 'pdf' ? '📄' : '📝';
+    const icon = a.type === 'pdf' ? '<i data-lucide="file-text" class="icon-sm"></i>' : '<i data-lucide="file-edit" class="icon-sm"></i>';
     return `
       <div class="article-card">
         <div class="article-card-icon">${icon}</div>
@@ -785,8 +799,8 @@ function renderLibrary() {
           <div class="article-meta">${new Date(a.dateAdded).toLocaleDateString()}${a.size ? ' · ' + formatBytes(a.size) : ''}${a.tags.length ? ' · ' + a.tags.join(', ') : ''}</div>
         </div>
         <div class="article-actions">
-          <button class="btn btn-ghost btn-sm" onclick="openArticle('${a.id}')">📖</button>
-          <button class="btn btn-danger btn-sm" onclick="deleteArticle('${a.id}')">✕</button>
+          <button class="btn btn-ghost btn-sm" onclick="openArticle('${a.id}')"><i data-lucide="book-open" class="icon-sm"></i></button>
+          <button class="btn btn-danger btn-sm" onclick="deleteArticle('${a.id}')"><i data-lucide="x" class="icon-sm"></i></button>
         </div>
       </div>`;
   }
@@ -794,7 +808,7 @@ function renderLibrary() {
   function column(track, articles, show) {
     const isAstro = track === 'astro';
     const color   = isAstro ? 'var(--astro)' : 'var(--mars)';
-    const label   = isAstro ? '🔭 Astrobiology' : '🪐 Martian Fans';
+    const label   = isAstro ? '<i data-lucide="telescope" class="icon-sm"></i> Astrobiology' : '<i data-lucide="globe" class="icon-sm"></i> Martian Fans';
     const emptyMsg = isAstro
       ? 'Drop papers into the Astrobiology zone above'
       : 'Drop papers into the Martian Fans zone above';
@@ -808,7 +822,7 @@ function renderLibrary() {
         <div class="lib-col-body">
           ${articles.length
             ? articles.map(articleCard).join('')
-            : `<div class="empty-state"><div class="empty-state-icon">${isAstro ? '🔭' : '🪐'}</div><div class="empty-state-text">No articles yet</div><div class="empty-state-sub">${emptyMsg}</div></div>`
+            : `<div class="empty-state"><div class="empty-state-icon"><i data-lucide="${isAstro ? 'telescope' : 'globe'}"></i></div><div class="empty-state-text">No articles yet</div><div class="empty-state-sub">${emptyMsg}</div></div>`
           }
         </div>
       </div>`;

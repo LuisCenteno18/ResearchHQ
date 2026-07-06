@@ -13,7 +13,7 @@
 <aside class="sidebar">
   <div class="sidebar-logo">
     <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:2px;">
-      <div class="logo-title">🔭 <span class="logo-text">ResearchHQ</span></div>
+      <div class="logo-title"><i data-lucide="telescope" class="icon-sm"></i> <span class="logo-text">ResearchHQ</span></div>
     </div>
     <div class="logo-sub">6-Month Research Planner</div>
   </div>
@@ -54,20 +54,20 @@
   <!-- Auth status -->
   <div id="auth-panel" style="padding:12px 16px; border-top:1px solid var(--border); margin-top:auto;">
     <div id="auth-signed-out" style="display:flex;flex-direction:column;gap:8px;">
-      <div class="auth-status-text" style="font-size:11px;color:var(--text3);text-align:center;">👁 Viewing as Guest</div>
+      <div class="auth-status-text" style="font-size:11px;color:var(--text3);text-align:center;"><i data-lucide="eye" class="icon-sm"></i> Viewing as Guest</div>
       <button class="btn btn-primary auth-btn" onclick="signIn()">
-        <span class="auth-icon">🔑</span><span class="auth-text">Sign In to Edit</span>
+        <span class="auth-icon"><i data-lucide="key" class="icon-sm"></i></span><span class="auth-text">Sign In to Edit</span>
       </button>
     </div>
     <div id="auth-signed-in" style="display:none;flex-direction:column;gap:8px;">
       <div id="auth-user-email" style="font-size:11px;color:var(--text3);text-align:center;"></div>
       <button class="btn btn-ghost auth-btn" onclick="signOut()">
-        <span class="auth-icon">🚪</span><span class="auth-text">Sign Out</span>
+        <span class="auth-icon"><i data-lucide="log-out" class="icon-sm"></i></span><span class="auth-text">Sign Out</span>
       </button>
     </div>
   </div>
   <div class="theme-toggle" id="theme-toggle-row">
-    <span class="theme-toggle-label" id="theme-toggle-label">☀️ Light Mode</span>
+    <span class="theme-toggle-label" id="theme-toggle-label"><i data-lucide="sun" class="icon-sm"></i> Light Mode</span>
     <div class="toggle-track" id="toggle-track" onclick="toggleTheme()">
       <div class="toggle-thumb"></div>
     </div>
@@ -88,7 +88,7 @@
   <section id="view-dashboard" class="view active">
     <div class="view-header">
       <div class="view-title">Dashboard</div>
-      <div class="view-sub">Jun 29, 2026 – Dec 26, 2026 &nbsp;·&nbsp; 26 weeks of dual-track research</div>
+      <div class="view-sub">Jun 29, 2026 — Dec 26, 2026 &nbsp;·&nbsp; 26 weeks of dual-track research</div>
     </div>
     <div class="view-body" id="dash-body"></div>
   </section>
@@ -114,7 +114,7 @@
         <div class="upload-zone upload-zone-astro" id="upload-zone-astro">
           <input type="file" id="file-input-astro" multiple accept=".pdf,.txt,.md" style="display:none">
           <div class="upload-zone-badge badge-astro">ASTROBIOLOGY</div>
-          <div class="upload-icon">🔭</div>
+          <div class="upload-icon"><i data-lucide="telescope" class="icon-lg"></i></div>
           <div class="upload-text">Drag &amp; drop here</div>
           <div class="upload-sub">or click to browse</div>
           <div class="upload-sub">PDF, TXT, Markdown</div>
@@ -123,7 +123,7 @@
         <div class="upload-zone upload-zone-mars" id="upload-zone-mars">
           <input type="file" id="file-input-mars" multiple accept=".pdf,.txt,.md" style="display:none">
           <div class="upload-zone-badge badge-mars">MARTIAN FANS</div>
-          <div class="upload-icon">🪐</div>
+          <div class="upload-icon"><i data-lucide="globe" class="icon-lg"></i></div>
           <div class="upload-text">Drag &amp; drop here</div>
           <div class="upload-sub">or click to browse</div>
           <div class="upload-sub">PDF, TXT, Markdown</div>
@@ -133,8 +133,8 @@
       <div class="lib-toolbar">
         <input class="search-input" id="lib-search" placeholder="Search articles…" oninput="renderLibrary()">
         <button class="filter-btn active" data-filter="all" onclick="setLibFilter('all')">All</button>
-        <button class="filter-btn" data-filter="astro" onclick="setLibFilter('astro')">🔭 Astrobiology</button>
-        <button class="filter-btn" data-filter="mars" onclick="setLibFilter('mars')">🪐 Martian Fans</button>
+        <button class="filter-btn" data-filter="astro" onclick="setLibFilter('astro')"><i data-lucide="telescope" class="icon-sm"></i> Astrobiology</button>
+        <button class="filter-btn" data-filter="mars" onclick="setLibFilter('mars')"><i data-lucide="globe" class="icon-sm"></i> Martian Fans</button>
         <select id="lib-sort" class="track-select" style="margin-left:auto; padding: 6px; font-size: 12px;" onchange="renderLibrary()">
           <option value="date-desc">Newest First</option>
           <option value="date-asc">Oldest First</option>
@@ -175,7 +175,7 @@
   <div class="modal" style="max-width:400px; padding: 0;">
     <div class="modal-header">
       <span class="modal-title" id="cal-modal-title">Edit Event</span>
-      <button class="modal-close" onclick="closeCalModal()">✕</button>
+      <button class="modal-close" onclick="closeCalModal()"><i data-lucide="x" class="icon-sm"></i></button>
     </div>
     <div class="modal-body" style="padding:16px;">
       <input type="hidden" id="cal-ev-id">
@@ -206,7 +206,7 @@
   <div class="modal">
     <div class="modal-header">
       <span class="modal-title" id="modal-title"></span>
-      <button class="modal-close" id="modal-close">✕</button>
+      <button class="modal-close" id="modal-close"><i data-lucide="x" class="icon-sm"></i></button>
     </div>
     <div class="modal-body" id="modal-body"></div>
   </div>
@@ -220,6 +220,7 @@
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
 <script src="firebase-config.js"></script>
+<script src="https://unpkg.com/lucide@latest"></script>
 <script src="data.js"></script>
 <script src="app.js"></script>
 </body>

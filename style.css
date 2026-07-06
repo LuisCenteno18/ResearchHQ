@@ -477,3 +477,8 @@ body { font-family: 'Inter', sans-serif; background: var(--bg); color: var(--tex
 .tag-both { background: var(--accent-dim); color: var(--accent); border: 1px solid rgba(158,168,245,0.25); }
 .tag-tool { background: rgba(95,207,138,0.1); color: var(--green); border: 1px solid rgba(95,207,138,0.2); }
 
+
+/* LUCIDE ICONS */
+.lucide { stroke-width: 2; flex-shrink: 0; }
+.icon-sm { width: 14px; height: 14px; vertical-align: -2px; display: inline-block; }
+.icon-lg { width: 28px; height: 28px; vertical-align: -6px; display: inline-block; }
