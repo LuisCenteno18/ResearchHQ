@@ -507,6 +507,21 @@ function renderWeekDetail() {
     resourceOpts += `</optgroup>`;
   });
 
+  const wStart = new Date(w.startDate);
+  const wEnd = new Date(w.endDate);
+  const weekEvents = (state.calEvents || []).filter(ev => {
+    const evStart = new Date(ev.start);
+    const evEnd = ev.end ? new Date(ev.end) : evStart;
+    return (evStart <= wEnd && evEnd >= wStart);
+  });
+
+  let eventsHTML = '';
+  if (weekEvents.length > 0) {
+    eventsHTML = `<div style="margin-bottom:16px; display:flex; flex-wrap:wrap; gap:6px;">
+      ${weekEvents.map(ev => `<div class="cal-task-chip" style="background:var(--surface2);border:1px solid var(--border);color:var(--text2);font-size:11px;padding:3px 8px;border-radius:6px;display:flex;align-items:center;gap:4px;" title="${ev.start}${ev.end ? ' to ' + ev.end : ''}">🗓 ${ev.text}</div>`).join('')}
+    </div>`;
+  }
+
   detail.innerHTML = `
     <div class="flex items-center justify-between" style="margin-bottom:16px">
       <div>
@@ -518,7 +533,8 @@ function renderWeekDetail() {
         <div style="font-size:10px;color:var(--text3)">complete</div>
       </div>
     </div>
-    <div class="progress-bar" style="margin-bottom:20px"><div class="progress-bar-fill" style="width:${pct}%;background:${phase.color}"></div></div>
+    <div class="progress-bar" style="margin-bottom:16px"><div class="progress-bar-fill" style="width:${pct}%;background:${phase.color}"></div></div>
+    ${eventsHTML}
     ${taskHTML || '<div class="empty-state"><div class="empty-state-icon">📋</div><div class="empty-state-text">No tasks yet</div><div class="empty-state-sub">Add one below</div></div>'}
     <div class="add-task-row">
       <input id="new-task-text" class="add-task-input" placeholder="Add a new task…" onkeydown="if(event.key==='Enter')addTask()">
