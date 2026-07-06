@@ -1,15 +1,82 @@
 
-// ── Storage ──────────────────────────────────────────────────────────────────
-const STORE_KEY = 'researchHQ_v1';
+// ── Auth & Firestore Storage ─────────────────────────────────────────────────
+const AUTHORIZED_EMAIL = 'zecalanga12@gmail.com'; // only this user can edit
+let isEditor = false;
 
-const Storage = {
-  load() {
-    try { return JSON.parse(localStorage.getItem(STORE_KEY)) || null; } catch { return null; }
-  },
-  save(state) {
-    localStorage.setItem(STORE_KEY, JSON.stringify(state));
+function signIn() {
+  const provider = new firebase.auth.GoogleAuthProvider();
+  auth.signInWithPopup(provider).catch(e => toast('Sign-in failed: ' + e.message, 'error'));
+}
+
+function signOut() {
+  auth.signOut();
+}
+
+function updateAuthUI(user) {
+  const out  = document.getElementById('auth-signed-out');
+  const inn  = document.getElementById('auth-signed-in');
+  const mail = document.getElementById('auth-user-email');
+  if (user) {
+    isEditor = user.email === AUTHORIZED_EMAIL;
+    out.style.display = 'none';
+    inn.style.display = 'flex';
+    mail.textContent = '✏️ ' + user.email;
+    if (!isEditor) {
+      mail.textContent = '👁 Viewing as ' + user.email;
+    }
+  } else {
+    isEditor = false;
+    out.style.display = 'flex';
+    inn.style.display = 'none';
   }
-};
+  // Show/hide edit controls
+  document.querySelectorAll('.editor-only').forEach(el => {
+    el.style.display = isEditor ? '' : 'none';
+  });
+}
+
+// Firestore save (debounced to avoid excessive writes)
+let _saveTimer = null;
+function save() {
+  if (!isEditor) return;
+  clearTimeout(_saveTimer);
+  _saveTimer = setTimeout(() => {
+    DOC.set({
+      weeks: state.weeks,
+      articles: state.articles,
+      calEvents: state.calEvents || []
+    }).catch(e => console.error('Firestore save error:', e));
+  }, 800);
+}
+
+// Load state from Firestore
+async function loadFromFirestore() {
+  try {
+    const snap = await DOC.get();
+    if (snap.exists) {
+      const data = snap.data();
+      state.weeks    = data.weeks    || generateDefaultWeeks();
+      state.articles = data.articles || [];
+      state.calEvents = data.calEvents && data.calEvents.length
+        ? data.calEvents
+        : CAL_EVENTS.map(ev => ({ ...ev, id: UID() }));
+    } else {
+      // First run — seed defaults and save
+      state.weeks     = generateDefaultWeeks();
+      state.articles  = [];
+      state.calEvents = CAL_EVENTS.map(ev => ({ ...ev, id: UID() }));
+      if (isEditor) {
+        DOC.set({ weeks: state.weeks, articles: state.articles, calEvents: state.calEvents });
+      }
+    }
+  } catch(e) {
+    console.error('Firestore load error:', e);
+    // Fallback to localStorage
+    const local = localStorage.getItem('researchHQ_v1');
+    if (local) { const d = JSON.parse(local); state.weeks = d.weeks || []; state.articles = d.articles || []; state.calEvents = d.calEvents || []; }
+  }
+}
+
 
 // ── Theme ────────────────────────────────────────────────────────────────────
 function initTheme() {
@@ -87,15 +154,7 @@ const ArtDB = {
 let state = { weeks: [], articles: [], calEvents: null, activeView: 'dashboard', selectedWeek: 1 };
 
 function initState() {
-  const saved = Storage.load();
-  if (saved) { state = { ...state, ...saved }; }
-  else { state.weeks = generateDefaultWeeks(); Storage.save(state); }
-  
-  if (!state.calEvents) {
-    state.calEvents = CAL_EVENTS.map(ev => ({ ...ev, id: UID() }));
-    Storage.save(state);
-  }
-
+  // calEvents seed handled in loadFromFirestore
   const today = new Date();
   for (let i = 0; i < state.weeks.length; i++) {
     const w = state.weeks[i];
@@ -104,8 +163,6 @@ function initState() {
     }
   }
 }
-
-function save() { Storage.save({ weeks: state.weeks, articles: state.articles, calEvents: state.calEvents }); }
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 const $ = id => document.getElementById(id);
@@ -900,8 +957,17 @@ function updateSidebarStats() {
 }
 
 // ── Init ──────────────────────────────────────────────────────────────────────
-document.addEventListener('DOMContentLoaded', () => {
-  initState();
+document.addEventListener('DOMContentLoaded', async () => {
+
+  // Auth state listener - fires immediately on load
+  auth.onAuthStateChanged(async (user) => {
+    updateAuthUI(user);
+    // Reload data whenever auth changes so editors see edit controls
+    await loadFromFirestore();
+    initState();
+    renderAll();
+    updateSidebarStats();
+  });
 
   // Nav
   document.querySelectorAll('.nav-item').forEach(n =>
@@ -922,21 +988,19 @@ document.addEventListener('DOMContentLoaded', () => {
     const container = $('lib-cols');
     if (!container) return;
     const rect = container.getBoundingClientRect();
-    const x = e.clientX - rect.left;
-    let pct = (x / rect.width) * 100;
-    if (pct < 15) pct = 15;
-    if (pct > 85) pct = 85;
-    document.documentElement.style.setProperty('--split-left', `${pct}fr`);
-    document.documentElement.style.setProperty('--split-right', `${100 - pct}fr`);
+    const offset = e.clientX - rect.left;
+    const totalWidth = rect.width;
+    const leftPct = Math.min(Math.max((offset / totalWidth) * 100, 20), 80);
+    const rightPct = 100 - leftPct;
+    document.documentElement.style.setProperty('--split-left', leftPct + '%');
+    document.documentElement.style.setProperty('--split-right', rightPct + '%');
   });
-  document.addEventListener('mouseup', () => {
+  document.addEventListener('mouseup', e => {
     if (isResizing) {
       isResizing = false;
-      const resizer = $('lib-resizer');
-      if (resizer) resizer.classList.remove('active');
+      document.querySelectorAll('.lib-resizer').forEach(r => r.classList.remove('active'));
       document.body.style.cursor = '';
       document.body.style.userSelect = '';
-      
       // Save split preference to localStorage
       const splitLeft = document.documentElement.style.getPropertyValue('--split-left');
       const splitRight = document.documentElement.style.getPropertyValue('--split-right');
@@ -957,10 +1021,10 @@ document.addEventListener('DOMContentLoaded', () => {
   function setupZone(zoneId, inputId, track) {
     const zone = $(zoneId);
     const input = $(inputId);
-    zone.addEventListener('click', () => input.click());
+    zone.addEventListener('click', () => { if (isEditor) input.click(); else toast('Sign in to upload articles', 'error'); });
     zone.addEventListener('dragover', e => { e.preventDefault(); zone.classList.add('dragover'); });
     zone.addEventListener('dragleave', () => zone.classList.remove('dragover'));
-    zone.addEventListener('drop', e => { e.preventDefault(); zone.classList.remove('dragover'); handleUpload([...e.dataTransfer.files], track); });
+    zone.addEventListener('drop', e => { e.preventDefault(); zone.classList.remove('dragover'); if (isEditor) handleUpload([...e.dataTransfer.files], track); else toast('Sign in to upload articles', 'error'); });
     input.addEventListener('change', e => { handleUpload([...e.target.files], track); input.value = ''; });
   }
   setupZone('upload-zone-astro', 'file-input-astro', 'astro');
@@ -981,3 +1045,14 @@ document.addEventListener('DOMContentLoaded', () => {
   initTheme();
   navigate('dashboard');
 });
+
+function renderAll() {
+  renderDashboard();
+  renderWeekList();
+  renderWeekDetail();
+  renderLibrary();
+  renderCalendar();
+  renderResources();
+}
+
+

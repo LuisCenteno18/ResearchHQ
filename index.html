@@ -49,6 +49,17 @@
     <div class="stat-row"><span>Articles</span><span class="stat-val" id="stat-articles">0</span></div>
     <div class="stat-row"><span>Weeks Left</span><span class="stat-val" id="stat-weeks">26/26</span></div>
   </div>
+  <!-- Auth status -->
+  <div id="auth-panel" style="padding:12px 16px; border-top:1px solid var(--border); margin-top:auto;">
+    <div id="auth-signed-out" style="display:flex;flex-direction:column;gap:8px;">
+      <div style="font-size:11px;color:var(--text3);text-align:center;">👁 Viewing as Guest</div>
+      <button class="btn btn-primary" style="width:100%;font-size:12px;" onclick="signIn()">🔑 Sign In to Edit</button>
+    </div>
+    <div id="auth-signed-in" style="display:none;flex-direction:column;gap:8px;">
+      <div style="font-size:11px;color:var(--text3);text-align:center;" id="auth-user-email"></div>
+      <button class="btn btn-ghost" style="width:100%;font-size:12px;" onclick="signOut()">Sign Out</button>
+    </div>
+  </div>
   <div class="theme-toggle" id="theme-toggle-row">
     <span class="theme-toggle-label" id="theme-toggle-label">☀️ Light Mode</span>
     <div class="toggle-track" id="toggle-track" onclick="toggleTheme()">
@@ -125,10 +136,6 @@
     <div class="view-body">
       <div class="cal-months" id="cal-month-tabs"></div>
       <div class="cal-grid" id="cal-grid"></div>
-      <div style="margin-top:14px;display:flex;gap:16px;font-size:11px;color:var(--text3)">
-        <span><span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:var(--astro);margin-right:5px"></span>Astrobiology tasks</span>
-        <span><span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:var(--mars);margin-right:5px"></span>Martian Fan tasks</span>
-      </div>
     </div>
   </section>
 
@@ -187,6 +194,11 @@
 <!-- TOASTS -->
 <div class="toast-container" id="toasts"></div>
 
+<!-- Firebase SDK (compat - no bundler needed) -->
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+<script src="firebase-config.js"></script>
 <script src="data.js"></script>
 <script src="app.js"></script>
 </body>
