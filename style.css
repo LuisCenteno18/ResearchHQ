@@ -96,11 +96,13 @@ body { font-family: 'Inter', sans-serif; background: var(--bg); color: var(--tex
 .sidebar.collapsed .nav-item { justify-content: center; padding: 12px 0; font-size: 0; }
 .sidebar.collapsed .nav-item svg { margin: 0; }
 .sidebar.collapsed #auth-panel { padding: 12px 8px; }
-.sidebar.collapsed #auth-panel button { font-size: 0; padding: 10px 0; border: none; }
-.sidebar.collapsed #auth-panel button::before { content: '🔑'; font-size: 14px; }
-.sidebar.collapsed #auth-signed-in button::before { content: '🚪'; font-size: 14px; }
+.sidebar.collapsed .auth-status-text { display: none; }
+.sidebar.collapsed .auth-text { display: none; }
+.sidebar.collapsed .auth-icon { margin: 0; font-size: 16px; }
+.sidebar.collapsed .auth-btn { padding: 10px 0; border: none; justify-content: center; width: 100%; }
 .sidebar.collapsed #auth-signed-out div { display: none; }
 .sidebar.collapsed .theme-toggle { justify-content: center; padding: 12px 0; border-top: none; }
+.auth-btn { width: 100%; font-size: 12px; display: flex; align-items: center; justify-content: center; gap: 6px; }
 .sidebar-logo {
   padding: 20px 18px 16px; border-bottom: 1px solid var(--border);
 }
