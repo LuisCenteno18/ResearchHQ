@@ -152,6 +152,7 @@ const ArtDB = {
 
 // ── App State ─────────────────────────────────────────────────────────────────
 let state = { weeks: [], articles: [], calEvents: null, activeView: 'dashboard', selectedWeek: 1 };
+let highlightedEventId = null;
 
 function initState() {
   // calEvents seed handled in loadFromFirestore
@@ -360,6 +361,20 @@ function renderResources() {
 function setResFilter(f) { resFilter = f; renderResources(); }
 
 // ── Router ────────────────────────────────────────────────────────────────────
+function navigateToEvent(id, dateStr) {
+  highlightedEventId = id;
+  if (dateStr) {
+    const d = new Date(dateStr);
+    calMonth = d.getMonth();
+    calYear = d.getFullYear();
+  }
+  navigate('calendar');
+  setTimeout(() => {
+    highlightedEventId = null;
+    if (state.activeView === 'calendar') renderCalGrid();
+  }, 3000);
+}
+
 function navigate(view) {
   state.activeView = view;
   document.querySelectorAll('.view').forEach(v => v.classList.toggle('active', v.id === 'view-' + view));
@@ -517,9 +532,11 @@ function renderWeekDetail() {
 
   let eventsHTML = '';
   if (weekEvents.length > 0) {
-    eventsHTML = `<div style="margin-bottom:16px; display:flex; flex-wrap:wrap; gap:6px;">
-      ${weekEvents.map(ev => `<div class="cal-task-chip" style="background:var(--surface2);border:1px solid var(--border);color:var(--text2);font-size:11px;padding:3px 8px;border-radius:6px;display:flex;align-items:center;gap:4px;" title="${ev.start}${ev.end ? ' to ' + ev.end : ''}">🗓 ${ev.text}</div>`).join('')}
-    </div>`;
+    eventsHTML = `
+      <div style="font-size:11px;font-weight:600;color:var(--text3);margin-bottom:8px;text-transform:uppercase;letter-spacing:0.5px;">Week Events</div>
+      <div style="margin-bottom:20px; display:flex; flex-wrap:wrap; gap:6px;">
+        ${weekEvents.map(ev => `<div class="cal-task-chip" style="background:var(--surface2);border:1px solid var(--border);color:var(--text2);font-size:11px;padding:3px 8px;border-radius:6px;display:flex;align-items:center;gap:4px;cursor:pointer;" onclick="navigateToEvent('${ev.id}', '${ev.start}')" title="${ev.start}${ev.end ? ' to ' + ev.end : ''}">🗓 ${ev.text}</div>`).join('')}
+      </div>`;
   }
 
   detail.innerHTML = `
@@ -726,9 +743,30 @@ async function deleteWeekReport(id, weekNum, track) {
 // ── Library ───────────────────────────────────────────────────────────────────
 let libFilter = 'all';
 
+function formatBytes(bytes, decimals = 1) {
+  if (!+bytes) return '';
+  const k = 1024, dm = decimals < 0 ? 0 : decimals, sizes = ['B', 'KB', 'MB', 'GB'];
+  const i = Math.floor(Math.log(bytes) / Math.log(k));
+  return `${parseFloat((bytes / Math.pow(k, i)).toFixed(dm))} ${sizes[i]}`;
+}
+
 function renderLibrary() {
   const container = $('articles-grid');
-  const all = state.articles;
+  
+  let all = [...state.articles];
+  const q = $('lib-search') ? $('lib-search').value.toLowerCase() : '';
+  if (q) all = all.filter(a => a.title.toLowerCase().includes(q));
+
+  const sort = $('lib-sort') ? $('lib-sort').value : 'date-desc';
+  all.sort((a, b) => {
+    if (sort === 'date-desc') return new Date(b.dateAdded) - new Date(a.dateAdded);
+    if (sort === 'date-asc') return new Date(a.dateAdded) - new Date(b.dateAdded);
+    if (sort === 'alpha-asc') return a.title.localeCompare(b.title);
+    if (sort === 'alpha-desc') return b.title.localeCompare(a.title);
+    if (sort === 'size-desc') return (b.size || 0) - (a.size || 0);
+    if (sort === 'size-asc') return (a.size || 0) - (b.size || 0);
+    return 0;
+  });
 
   // When a filter is active, show only matching track but still in two-column layout
   const astroArticles = all.filter(a => a.track === 'astro' || a.track === 'both');
@@ -744,7 +782,7 @@ function renderLibrary() {
         <div class="article-card-icon">${icon}</div>
         <div class="article-card-main">
           <div class="article-title">${a.title}</div>
-          <div class="article-meta">${new Date(a.dateAdded).toLocaleDateString()}${a.tags.length ? ' · ' + a.tags.join(', ') : ''}</div>
+          <div class="article-meta">${new Date(a.dateAdded).toLocaleDateString()}${a.size ? ' · ' + formatBytes(a.size) : ''}${a.tags.length ? ' · ' + a.tags.join(', ') : ''}</div>
         </div>
         <div class="article-actions">
           <button class="btn btn-ghost btn-sm" onclick="openArticle('${a.id}')">📖</button>
@@ -800,7 +838,7 @@ async function handleUpload(files, track = 'astro') {
     const isPDF = file.type === 'application/pdf' || file.name.endsWith('.pdf');
     if (!isText && !isPDF) { toast(`Unsupported: ${file.name}`, 'error'); continue; }
     const id = UID();
-    const meta = { id, title: file.name.replace(/\.[^.]+$/, ''), type: isPDF ? 'pdf' : 'text', track, tags: [], dateAdded: new Date().toISOString(), notes: '' };
+    const meta = { id, title: file.name.replace(/\.[^.]+$/, ''), type: isPDF ? 'pdf' : 'text', track, tags: [], dateAdded: new Date().toISOString(), notes: '', size: file.size };
     try {
       const buf = await file.arrayBuffer();
       await ArtDB.put(id, buf);
@@ -1051,7 +1089,11 @@ function renderCalGrid() {
     html += `<div class="cal-day${isToday?' today':''}" title="${tasks.length} tasks" onclick="openCalModal(null, '${dateStr}')">
       <div class="cal-day-num">${d}</div>
       <div style="margin-top:4px">
-        ${evs.map(ev => `<div class="cal-task-chip" style="background:var(--surface2);border:1px solid var(--border);color:var(--text2)" title="${ev.text}" onclick="event.stopPropagation(); openCalModal('${ev.id}')">${ev.text}</div>`).join('')}
+        ${evs.map(ev => {
+          const isHL = (ev.id === highlightedEventId);
+          const style = isHL ? 'background:var(--accent);border:1px solid var(--accent);color:#fff;box-shadow:0 0 0 2px var(--surface),0 0 0 3px var(--accent)' : 'background:var(--surface2);border:1px solid var(--border);color:var(--text2)';
+          return `<div class="cal-task-chip" style="${style}" title="${ev.text}" onclick="event.stopPropagation(); openCalModal('${ev.id}')">${ev.text}</div>`;
+        }).join('')}
       </div>
     </div>`;
   }

@@ -131,10 +131,18 @@
       </div>
       <!-- Toolbar -->
       <div class="lib-toolbar">
-        <input class="search-input" id="lib-search" placeholder="Search articles…">
+        <input class="search-input" id="lib-search" placeholder="Search articles…" oninput="renderLibrary()">
         <button class="filter-btn active" data-filter="all" onclick="setLibFilter('all')">All</button>
         <button class="filter-btn" data-filter="astro" onclick="setLibFilter('astro')">🔭 Astrobiology</button>
         <button class="filter-btn" data-filter="mars" onclick="setLibFilter('mars')">🪐 Martian Fans</button>
+        <select id="lib-sort" class="track-select" style="margin-left:auto; padding: 6px; font-size: 12px;" onchange="renderLibrary()">
+          <option value="date-desc">Newest First</option>
+          <option value="date-asc">Oldest First</option>
+          <option value="alpha-asc">Alphabetical (A-Z)</option>
+          <option value="alpha-desc">Alphabetical (Z-A)</option>
+          <option value="size-desc">Size (Largest)</option>
+          <option value="size-asc">Size (Smallest)</option>
+        </select>
       </div>
       <div class="articles-grid" id="articles-grid"></div>
     </div>
