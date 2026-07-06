@@ -591,16 +591,16 @@ function renderTaskItem(t, weekNum) {
   const pri = `<span class="badge badge-${t.priority}" style="font-size:9px">${t.priority}</span>`;
   const resLink = t.resourceUrl ? `<a href="${t.resourceUrl}" target="_blank" class="task-res-link" title="${t.resourceName}">🔗</a>` : '';
   return `<div class="task-item${done}" id="task-${t.id}">
-    <div class="task-check${chk}" onclick="toggleTask('${t.id}',${weekNum})" title="Toggle done">
+    <div class="task-check${chk}" onclick="toggleTask('${t.id}',${weekNum})" title="Toggle done" style="${isEditor ? 'cursor:pointer' : 'cursor:not-allowed'}">
       ${t.done ? '<svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="3"><path d="M20 6L9 17l-5-5"/></svg>' : ''}
     </div>
     <div class="flex items-center gap-2" style="flex:1; min-width:0">
-      <textarea class="task-text${doneText}" rows="1" onblur="updateTask('${t.id}',${weekNum},this.value)" oninput="autoResize(this)">${t.text}</textarea>
+      <textarea class="task-text${doneText}" rows="1" onblur="updateTask('${t.id}',${weekNum},this.value)" oninput="autoResize(this)" ${isEditor ? '' : 'readonly'}>${t.text}</textarea>
       ${resLink}
     </div>
     <div class="task-actions">
       ${pri}
-      <button class="btn btn-danger btn-icon btn-sm" onclick="deleteTask('${t.id}',${weekNum})" title="Delete">✕</button>
+      ${isEditor ? `<button class="btn btn-danger btn-icon btn-sm" onclick="deleteTask('${t.id}',${weekNum})" title="Delete">✕</button>` : ''}
     </div>
   </div>`;
 }
@@ -608,18 +608,21 @@ function renderTaskItem(t, weekNum) {
 function autoResize(el) { el.style.height='auto'; el.style.height=el.scrollHeight+'px'; }
 
 function toggleTask(id, weekNum) {
+  if (!isEditor) { toast('Only editors can toggle tasks', 'error'); return; }
   const w = state.weeks.find(x => x.weekNum === weekNum);
   const t = w?.tasks.find(x => x.id === id);
   if (t) { t.done = !t.done; save(); renderWeekList(); renderWeekDetail(); updateSidebarStats(); }
 }
 
 function updateTask(id, weekNum, val) {
+  if (!isEditor) return;
   const w = state.weeks.find(x => x.weekNum === weekNum);
   const t = w?.tasks.find(x => x.id === id);
   if (t && val.trim()) { t.text = val.trim(); save(); }
 }
 
 function deleteTask(id, weekNum) {
+  if (!isEditor) { toast('Only editors can delete tasks', 'error'); return; }
   const w = state.weeks.find(x => x.weekNum === weekNum);
   if (w) { w.tasks = w.tasks.filter(x => x.id !== id); save(); renderWeekList(); renderWeekDetail(); updateSidebarStats(); }
 }
