@@ -81,7 +81,26 @@ body { font-family: 'Inter', sans-serif; background: var(--bg); color: var(--tex
   width: var(--sidebar-w); flex-shrink: 0; height: 100vh;
   background: #10131c; border-right: 1px solid var(--border);
   display: flex; flex-direction: column; overflow: hidden;
+  transition: width 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
+.sidebar.collapsed { width: 68px; }
+.sidebar.collapsed .logo-text,
+.sidebar.collapsed .logo-sub,
+.sidebar.collapsed .nav-section,
+.sidebar.collapsed .sidebar-tracks,
+.sidebar.collapsed .sidebar-stats,
+.sidebar.collapsed #auth-user-email,
+.sidebar.collapsed .theme-toggle-label { display: none; }
+.sidebar.collapsed .sidebar-logo { padding: 16px 12px; }
+.sidebar.collapsed .sidebar-logo > div { flex-direction: column; gap: 12px; align-items: center; }
+.sidebar.collapsed .nav-item { justify-content: center; padding: 12px 0; font-size: 0; }
+.sidebar.collapsed .nav-item svg { margin: 0; }
+.sidebar.collapsed #auth-panel { padding: 12px 8px; }
+.sidebar.collapsed #auth-panel button { font-size: 0; padding: 10px 0; border: none; }
+.sidebar.collapsed #auth-panel button::before { content: '🔑'; font-size: 14px; }
+.sidebar.collapsed #auth-signed-in button::before { content: '🚪'; font-size: 14px; }
+.sidebar.collapsed #auth-signed-out div { display: none; }
+.sidebar.collapsed .theme-toggle { justify-content: center; padding: 12px 0; border-top: none; }
 .sidebar-logo {
   padding: 20px 18px 16px; border-bottom: 1px solid var(--border);
 }
