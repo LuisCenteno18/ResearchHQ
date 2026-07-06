@@ -540,6 +540,47 @@ function renderWeekDetail() {
     <div class="week-notes">
       <div class="notes-label">Week Notes</div>
       <textarea class="notes-textarea" placeholder="Reflections, ideas, blockers…" oninput="saveNotes(this.value,${w.weekNum})">${w.notes||''}</textarea>
+    </div>
+    <div class="week-reports">
+      <div class="notes-label" style="margin-bottom:12px">📎 Weekly Reports</div>
+      <div class="reports-tracks">
+        <div class="report-track">
+          <div class="report-track-header">
+            <span class="badge badge-astro">Astrobiology</span>
+            ${isEditor ? `<label class="btn btn-ghost btn-sm" style="cursor:pointer;font-size:11px">
+              + Upload
+              <input type="file" style="display:none" accept=".pdf,.doc,.docx,.txt,.md" onchange="uploadWeekReport(event,${w.weekNum},'astro')">
+            </label>` : ''}
+          </div>
+          <div id="reports-astro-${w.weekNum}" class="report-list">
+            ${(w.reports||[]).filter(r=>r.track==='astro').map(r=>`
+              <div class="report-item">
+                <span class="report-icon">📄</span>
+                <span class="report-name" onclick="openWeekReport('${r.id}','${r.name}','${r.type}')" title="Open ${r.name}">${r.name}</span>
+                <span class="report-size">${(r.size/1024).toFixed(1)}KB</span>
+                ${isEditor ? `<button class="btn btn-danger btn-icon btn-sm" onclick="deleteWeekReport('${r.id}',${w.weekNum},'astro')" title="Delete">✕</button>` : ''}
+              </div>`).join('') || '<div class="report-empty">No reports yet</div>'}
+          </div>
+        </div>
+        <div class="report-track">
+          <div class="report-track-header">
+            <span class="badge badge-mars">Martian Fans</span>
+            ${isEditor ? `<label class="btn btn-ghost btn-sm" style="cursor:pointer;font-size:11px">
+              + Upload
+              <input type="file" style="display:none" accept=".pdf,.doc,.docx,.txt,.md" onchange="uploadWeekReport(event,${w.weekNum},'mars')">
+            </label>` : ''}
+          </div>
+          <div id="reports-mars-${w.weekNum}" class="report-list">
+            ${(w.reports||[]).filter(r=>r.track==='mars').map(r=>`
+              <div class="report-item">
+                <span class="report-icon">📄</span>
+                <span class="report-name" onclick="openWeekReport('${r.id}','${r.name}','${r.type}')" title="Open ${r.name}">${r.name}</span>
+                <span class="report-size">${(r.size/1024).toFixed(1)}KB</span>
+                ${isEditor ? `<button class="btn btn-danger btn-icon btn-sm" onclick="deleteWeekReport('${r.id}',${w.weekNum},'mars')" title="Delete">✕</button>` : ''}
+              </div>`).join('') || '<div class="report-empty">No reports yet</div>'}
+          </div>
+        </div>
+      </div>
     </div>`;
 }
 
@@ -608,6 +649,59 @@ function addTask() {
 function saveNotes(val, weekNum) {
   const w = state.weeks.find(x => x.weekNum === weekNum);
   if (w) { w.notes = val; save(); }
+}
+
+async function uploadWeekReport(event, weekNum, track) {
+  if (!isEditor) { toast('Sign in to upload reports', 'error'); return; }
+  const file = event.target.files[0];
+  if (!file) return;
+  const MAX = 20 * 1024 * 1024; // 20MB limit
+  if (file.size > MAX) { toast('File too large (max 20MB)', 'error'); return; }
+
+  const id = UID();
+  const reader = new FileReader();
+  reader.onload = async (e) => {
+    try {
+      await ArtDB.put(id, e.target.result);
+      const w = state.weeks.find(x => x.weekNum === weekNum);
+      if (!w.reports) w.reports = [];
+      w.reports.push({ id, name: file.name, size: file.size, type: file.type, track, uploadedAt: new Date().toISOString() });
+      save();
+      renderWeekDetail();
+      toast(`"${file.name}" uploaded`, 'success');
+    } catch(err) {
+      toast('Upload failed: ' + err.message, 'error');
+    }
+  };
+  reader.readAsArrayBuffer(file);
+}
+
+async function openWeekReport(id, name, type) {
+  try {
+    const buf = await ArtDB.get(id);
+    if (!buf) { toast('File not found in local storage', 'error'); return; }
+    const blob = new Blob([buf], { type: type || 'application/octet-stream' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.target = '_blank';
+    a.download = name;
+    a.click();
+    setTimeout(() => URL.revokeObjectURL(url), 5000);
+  } catch(err) {
+    toast('Could not open file: ' + err.message, 'error');
+  }
+}
+
+async function deleteWeekReport(id, weekNum, track) {
+  if (!isEditor) return;
+  const w = state.weeks.find(x => x.weekNum === weekNum);
+  if (!w) return;
+  w.reports = (w.reports || []).filter(r => r.id !== id);
+  await ArtDB.del(id);
+  save();
+  renderWeekDetail();
+  toast('Report deleted', 'info');
 }
 
 // ── Library ───────────────────────────────────────────────────────────────────
