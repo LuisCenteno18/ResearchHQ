@@ -70,7 +70,32 @@ async function loadFromFirestore() {
     const snap = await DOC.get();
     if (snap.exists) {
       const data = snap.data();
-      state.weeks    = data.weeks    || generateDefaultWeeks();
+      let loadedWeeks = data.weeks || generateDefaultWeeks();
+      if (!Array.isArray(loadedWeeks)) loadedWeeks = Object.values(loadedWeeks);
+      state.weeks = loadedWeeks.filter(w => w != null && w.weekNum !== undefined);
+      
+      // Migration: Add any missing default tasks to current state (e.g. from PDF updates)
+      const defaultWeeks = generateDefaultWeeks();
+      
+      // If the database has fewer weeks than the default (e.g., we added new weeks), add them
+      if (state.weeks.length < defaultWeeks.length) {
+        for (let i = state.weeks.length; i < defaultWeeks.length; i++) {
+          state.weeks.push(defaultWeeks[i]);
+        }
+      }
+
+      state.weeks.forEach((w, i) => {
+        const defaultW = defaultWeeks.find(dw => dw.weekNum === w.weekNum);
+        if (defaultW) {
+          defaultW.tasks.forEach(dt => {
+            if (w.tasks && !w.tasks.find(t => t.text === dt.text)) {
+              w.tasks.push({ ...dt, id: UID() });
+            }
+          });
+        }
+      });
+      if (isEditor) save();
+
       state.articles = data.articles || [];
       state.calEvents = data.calEvents && data.calEvents.length
         ? data.calEvents
@@ -168,7 +193,7 @@ const ArtDB = {
 };
 
 // ── App State ─────────────────────────────────────────────────────────────────
-let state = { weeks: [], articles: [], calEvents: null, activeView: 'dashboard', selectedWeek: 1, customResources: [] };
+let state = { weeks: generateDefaultWeeks(), articles: [], calEvents: null, activeView: 'dashboard', selectedWeek: 1, customResources: [] };
 let highlightedEventId = null;
 
 function initState() {
