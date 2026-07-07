@@ -482,3 +482,15 @@ body { font-family: 'Inter', sans-serif; background: var(--bg); color: var(--tex
 .lucide { stroke-width: 2; flex-shrink: 0; }
 .icon-sm { width: 14px; height: 14px; vertical-align: -2px; display: inline-block; }
 .icon-lg { width: 28px; height: 28px; vertical-align: -6px; display: inline-block; }
+
+/* FOOTER */
+.site-footer {
+  padding: 12px 28px;
+  font-size: 11px;
+  color: var(--text3);
+  text-align: center;
+  border-top: 1px solid var(--border);
+  background: var(--bg);
+  flex-shrink: 0;
+  line-height: 1.6;
+}
