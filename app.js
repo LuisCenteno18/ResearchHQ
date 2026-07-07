@@ -58,7 +58,8 @@ function save() {
     DOC.set({
       weeks: state.weeks,
       articles: state.articles,
-      calEvents: state.calEvents || []
+      calEvents: state.calEvents || [],
+      customResources: state.customResources || []
     }).catch(e => console.error('Firestore save error:', e));
   }, 800);
 }
@@ -74,13 +75,15 @@ async function loadFromFirestore() {
       state.calEvents = data.calEvents && data.calEvents.length
         ? data.calEvents
         : CAL_EVENTS.map(ev => ({ ...ev, id: UID() }));
+      state.customResources = data.customResources || [];
     } else {
       // First run — seed defaults and save
       state.weeks     = generateDefaultWeeks();
       state.articles  = [];
       state.calEvents = CAL_EVENTS.map(ev => ({ ...ev, id: UID() }));
+      state.customResources = [];
       if (isEditor) {
-        DOC.set({ weeks: state.weeks, articles: state.articles, calEvents: state.calEvents });
+        DOC.set({ weeks: state.weeks, articles: state.articles, calEvents: state.calEvents, customResources: state.customResources });
       }
     }
   } catch(e) {
@@ -165,7 +168,7 @@ const ArtDB = {
 };
 
 // ── App State ─────────────────────────────────────────────────────────────────
-let state = { weeks: [], articles: [], calEvents: null, activeView: 'dashboard', selectedWeek: 1 };
+let state = { weeks: [], articles: [], calEvents: null, activeView: 'dashboard', selectedWeek: 1, customResources: [] };
 let highlightedEventId = null;
 
 function initState() {
@@ -333,14 +336,35 @@ let resFilter = 'all';
 
 function renderResources() {
   const body = $('resources-body');
+  
+  const allData = [...RESOURCES];
+  if (state.customResources && state.customResources.length > 0) {
+    allData.push({
+      category: 'Community Resources',
+      icon: '<i data-lucide="users" class="icon-sm"></i>',
+      desc: 'Links and resources added by the community',
+      items: state.customResources
+    });
+  }
+
   const filtered = resFilter === 'all'
-    ? RESOURCES
-    : RESOURCES.map(cat => ({ ...cat, items: cat.items.filter(r => r.track === resFilter || r.track === 'both') })).filter(cat => cat.items.length);
+    ? allData
+    : allData.map(cat => ({ ...cat, items: cat.items.filter(r => r.track === resFilter || r.track === 'both') })).filter(cat => cat.items.length);
 
   const tagClass = t => t === 'astro' ? 'tag-astro' : t === 'mars' ? 'tag-mars' : t === 'both' ? 'tag-both' : 'tag-tool';
   const tagLabel = t => t === 'astro' ? 'Astrobiology' : t === 'mars' ? 'Martian Fans' : 'Both Tracks';
 
   body.innerHTML = `
+    <div class="add-task-row editor-only" style="margin-bottom: 16px; ${isEditor ? '' : 'display:none;'}">
+      <input id="new-res-name" class="add-task-input" placeholder="Resource Title...">
+      <input id="new-res-url" class="add-task-input" placeholder="https://...">
+      <select id="new-res-track" class="track-select">
+        <option value="astro">Astrobiology</option>
+        <option value="mars">Martian Fans</option>
+        <option value="both">Both</option>
+      </select>
+      <button class="btn btn-primary" onclick="addCustomResource()">Add Link</button>
+    </div>
     <div class="res-filter-bar">
       <button class="filter-btn${resFilter==='all'?' active':''}" onclick="setResFilter('all')">All Resources</button>
       <button class="filter-btn${resFilter==='astro'?' active':''}" onclick="setResFilter('astro')"><i data-lucide="telescope" class="icon-sm"></i> Astrobiology</button>
@@ -360,16 +384,60 @@ function renderResources() {
             <a class="res-card" href="${r.url}" target="_blank" rel="noopener noreferrer">
               <div class="res-card-header">
                 <div class="res-card-name">${r.name}</div>
-                <span class="res-card-tag ${tagClass(r.track)}">${tagLabel(r.track)}</span>
+                <div style="display:flex; gap:6px; align-items:center;">
+                  <span class="res-card-tag ${tagClass(r.track)}">${tagLabel(r.track)}</span>
+                  ${r.id && isEditor ? `<button class="btn btn-ghost btn-sm" style="color:var(--red); padding:0 4px;" onclick="deleteCustomResource('${r.id}', event)"><i data-lucide="trash-2" class="icon-sm"></i></button>` : ''}
+                </div>
               </div>
               <div class="res-card-desc">${r.desc}</div>
               <div class="res-card-url">${r.url}</div>
               <div class="res-card-footer">
-                ${r.tags.map(t => `<span class="res-chip">${t}</span>`).join('')}
+                ${r.tags && r.tags.length ? r.tags.map(t => `<span class="res-chip">${t}</span>`).join('') : ''}
               </div>
             </a>`).join('')}
         </div>
       </div>`).join('')}`;
+}
+
+function addCustomResource() {
+  const nameInput = $('new-res-name');
+  const urlInput = $('new-res-url');
+  const trackInput = $('new-res-track');
+  const name = nameInput.value.trim();
+  const url = urlInput.value.trim();
+  if (!name || !url) {
+    toast('Name and URL are required', 'error');
+    return;
+  }
+  let finalUrl = url;
+  if (!url.startsWith('http://') && !url.startsWith('https://')) {
+    finalUrl = 'https://' + url;
+  }
+  const track = trackInput.value;
+  state.customResources.push({
+    id: UID(),
+    name,
+    url: finalUrl,
+    desc: 'Community added resource',
+    track,
+    tags: ['Community']
+  });
+  save();
+  nameInput.value = '';
+  urlInput.value = '';
+  renderResources();
+  toast('Resource added', 'success');
+}
+
+function deleteCustomResource(id, e) {
+  e.preventDefault();
+  e.stopPropagation();
+  if (confirm('Delete this resource?')) {
+    state.customResources = state.customResources.filter(r => r.id !== id);
+    save();
+    renderResources();
+    toast('Resource deleted', 'success');
+  }
 }
 
 function setResFilter(f) { resFilter = f; renderResources(); }
@@ -991,6 +1059,10 @@ function changeCalMonth(delta) {
 }
 
 function openCalModal(id, dateStr) {
+  if (!isEditor) {
+    toast('Only admins can edit the calendar.', 'error');
+    return;
+  }
   const modal = $('cal-modal-overlay');
   const title = $('cal-modal-title');
   const delBtn = $('cal-ev-delete');
