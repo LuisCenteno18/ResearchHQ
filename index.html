@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>ResearchHQ — Astrobiology & Martian Alluvial Fans</title>
   <meta name="description" content="6-month research organizer for dual-track research in Astrobiology and Martian Geology">
-  <link rel="stylesheet" href="style.css">
+  <link rel="stylesheet" href="style.css?v=3">
 </head>
 <body>
 
@@ -14,6 +14,10 @@
   <div class="sidebar-logo">
     <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:2px;">
       <div class="logo-title"><i data-lucide="telescope" class="icon-sm"></i> <span class="logo-text">ResearchHQ</span></div>
+      <div class="notif-btn editor-only" onclick="openNotifModal()" style="position:relative; cursor:pointer; display:none;" title="Notifications">
+        <i data-lucide="bell" class="icon-sm"></i>
+        <div id="notif-badge" style="display:none; position:absolute; top:-2px; right:-2px; width:8px; height:8px; background:var(--red); border-radius:50%;"></div>
+      </div>
     </div>
     <div class="logo-sub">6-Month Research Planner</div>
   </div>
@@ -232,6 +236,18 @@
   </div>
 </div>
 
+<!-- NOTIFICATION MODAL -->
+<div class="modal-overlay" id="notif-modal-overlay">
+  <div class="modal" style="max-width:400px; padding: 0;">
+    <div class="modal-header">
+      <span class="modal-title">Notifications</span>
+      <button class="modal-close" onclick="closeNotifModal()"><i data-lucide="x" class="icon-sm"></i></button>
+    </div>
+    <div class="modal-body" id="notif-modal-body" style="padding:16px; max-height:400px; overflow-y:auto; display:flex; flex-direction:column; gap:12px;">
+    </div>
+  </div>
+</div>
+
 <!-- TOASTS -->
 <div class="toast-container" id="toasts"></div>
 
@@ -241,7 +257,7 @@
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
 <script src="firebase-config.js"></script>
 <script src="https://unpkg.com/lucide@latest"></script>
-<script src="data.js?v=2"></script>
-<script src="app.js?v=2"></script>
+<script src="data.js?v=3"></script>
+<script src="app.js?v=3"></script>
 </body>
 </html>

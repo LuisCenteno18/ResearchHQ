@@ -52,14 +52,14 @@ function updateAuthUI(user) {
 // Firestore save (debounced to avoid excessive writes)
 let _saveTimer = null;
 function save() {
-  if (!isEditor) return;
   clearTimeout(_saveTimer);
   _saveTimer = setTimeout(() => {
     DOC.set({
       weeks: state.weeks,
       articles: state.articles,
       calEvents: state.calEvents || [],
-      customResources: state.customResources || []
+      customResources: state.customResources || [],
+      alerts: state.alerts || []
     }).catch(e => console.error('Firestore save error:', e));
   }, 800);
 }
@@ -101,14 +101,27 @@ async function loadFromFirestore() {
         ? data.calEvents
         : CAL_EVENTS.map(ev => ({ ...ev, id: UID() }));
       state.customResources = data.customResources || [];
+      state.alerts = data.alerts || [];
+      
+      // Clean up alerts older than 5 days
+      const FIVE_DAYS = 5 * 24 * 60 * 60 * 1000;
+      const now = Date.now();
+      if (state.alerts) {
+        state.alerts = state.alerts.filter(a => (now - a.timestamp) <= FIVE_DAYS);
+      }
+      
+      if (isEditor) {
+        updateNotifBadge();
+      }
     } else {
       // First run — seed defaults and save
       state.weeks     = generateDefaultWeeks();
       state.articles  = [];
       state.calEvents = CAL_EVENTS.map(ev => ({ ...ev, id: UID() }));
       state.customResources = [];
+      state.alerts = [];
       if (isEditor) {
-        DOC.set({ weeks: state.weeks, articles: state.articles, calEvents: state.calEvents, customResources: state.customResources });
+        DOC.set({ weeks: state.weeks, articles: state.articles, calEvents: state.calEvents, customResources: state.customResources, alerts: state.alerts });
       }
     }
   } catch(e) {
@@ -193,7 +206,7 @@ const ArtDB = {
 };
 
 // ── App State ─────────────────────────────────────────────────────────────────
-let state = { weeks: generateDefaultWeeks(), articles: [], calEvents: null, activeView: 'dashboard', selectedWeek: 1, customResources: [] };
+let state = { weeks: generateDefaultWeeks(), articles: [], calEvents: null, activeView: 'dashboard', selectedWeek: 1, customResources: [], alerts: [] };
 let highlightedEventId = null;
 
 function initState() {
@@ -784,6 +797,13 @@ function addTask() {
     resourceUrl,
     resourceName
   });
+  
+  if (!isEditor) {
+    if (!state.alerts) state.alerts = [];
+    state.alerts.push({ id: UID(), message: `Added task "${text}" to Week ${state.selectedWeek}`, timestamp: Date.now(), read: false });
+    if (isEditor) updateNotifBadge();
+  }
+
   $('new-task-text').value = '';
   save(); renderWeekList(); renderWeekDetail(); updateSidebarStats();
   toast('Task added', 'success');
@@ -950,6 +970,13 @@ async function handleUpload(files, track = 'astro') {
       const buf = await file.arrayBuffer();
       await ArtDB.put(id, buf);
       state.articles.push(meta);
+      
+      if (!isEditor) {
+        if (!state.alerts) state.alerts = [];
+        state.alerts.push({ id: UID(), message: `Uploaded article "${meta.title}" to ${track === 'astro' ? 'Astrobiology' : 'Martian Fans'}`, timestamp: Date.now(), read: false });
+        if (isEditor) updateNotifBadge();
+      }
+
       save();
       toast(`Uploaded to ${track === 'astro' ? 'Astrobiology' : 'Martian Fans'}: ${meta.title}`, 'success');
     } catch (e) { toast(`Failed to upload ${file.name}`, 'error'); }
@@ -1287,10 +1314,10 @@ document.addEventListener('DOMContentLoaded', async () => {
   function setupZone(zoneId, inputId, track) {
     const zone = $(zoneId);
     const input = $(inputId);
-    zone.addEventListener('click', () => { if (isEditor) input.click(); else toast('Sign in to upload articles', 'error'); });
+    zone.addEventListener('click', () => { input.click(); });
     zone.addEventListener('dragover', e => { e.preventDefault(); zone.classList.add('dragover'); });
     zone.addEventListener('dragleave', () => zone.classList.remove('dragover'));
-    zone.addEventListener('drop', e => { e.preventDefault(); zone.classList.remove('dragover'); if (isEditor) handleUpload([...e.dataTransfer.files], track); else toast('Sign in to upload articles', 'error'); });
+    zone.addEventListener('drop', e => { e.preventDefault(); zone.classList.remove('dragover'); handleUpload([...e.dataTransfer.files], track); });
     input.addEventListener('change', e => { handleUpload([...e.target.files], track); input.value = ''; });
   }
   setupZone('upload-zone-astro', 'file-input-astro', 'astro');
@@ -1299,6 +1326,9 @@ document.addEventListener('DOMContentLoaded', async () => {
   // Modal close
   $('modal-close').addEventListener('click', () => $('modal-overlay').classList.remove('open'));
   $('modal-overlay').addEventListener('click', e => { if (e.target === $('modal-overlay')) $('modal-overlay').classList.remove('open'); });
+
+  // Notif Modal close
+  $('notif-modal-overlay').addEventListener('click', e => { if (e.target === $('notif-modal-overlay')) closeNotifModal(); });
 
   // Search
   $('lib-search').addEventListener('input', e => {
@@ -1321,4 +1351,56 @@ function renderAll() {
   renderResources();
 }
 
+// ── Notifications ────────────────────────────────────────────────────────────
+function updateNotifBadge() {
+  const badge = $('notif-badge');
+  if (!badge) return;
+  if (!state.alerts) state.alerts = [];
+  const unreadCount = state.alerts.filter(a => !a.read).length;
+  badge.style.display = unreadCount > 0 ? 'block' : 'none';
+}
 
+function openNotifModal() {
+  $('notif-modal-overlay').classList.add('open');
+  renderNotifs();
+  
+  // Mark all as read
+  let changed = false;
+  state.alerts.forEach(a => {
+    if (!a.read) { a.read = true; changed = true; }
+  });
+  if (changed) save();
+  updateNotifBadge();
+}
+
+function closeNotifModal() {
+  $('notif-modal-overlay').classList.remove('open');
+}
+
+function renderNotifs() {
+  const container = $('notif-modal-body');
+  container.innerHTML = '';
+  if (!state.alerts || state.alerts.length === 0) {
+    container.innerHTML = '<div style="color:var(--text3); text-align:center; padding: 20px;">No notifications.</div>';
+    return;
+  }
+  
+  const sorted = [...state.alerts].sort((a,b) => b.timestamp - a.timestamp);
+  sorted.forEach(alert => {
+    const div = document.createElement('div');
+    div.className = 'notif-item' + (alert.read ? '' : ' unread');
+    
+    const timeStr = new Date(alert.timestamp).toLocaleString();
+    div.innerHTML = `
+      <div style="display:flex; align-items:flex-start; gap:8px;">
+        <i data-lucide="bell" class="icon-sm" style="margin-top:2px; color:var(--accent)"></i>
+        <div>
+          <div>${alert.message}</div>
+          <div class="notif-item-time">${timeStr}</div>
+        </div>
+      </div>
+    `;
+    container.appendChild(div);
+  });
+  lucide.createIcons();
+}

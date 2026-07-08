@@ -493,5 +493,32 @@ body { font-family: 'Inter', sans-serif; background: var(--bg); color: var(--tex
   text-align: center;
   background: transparent;
   flex-shrink: 0;
-  line-height: 1.5;
 }
+
+/* NOTIFICATIONS */
+.notif-item {
+  padding: 12px;
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  font-size: 13px;
+  color: var(--text2);
+}
+.notif-item.unread {
+  border-left: 3px solid var(--accent);
+  background: var(--surface);
+  color: var(--text);
+}
+.notif-item-time {
+  font-size: 10px;
+  color: var(--text3);
+  margin-top: 4px;
+}
+.notif-btn {
+  color: var(--text3);
+  transition: color 0.2s;
+}
+.notif-btn:hover {
+  color: var(--text);
+}
+
