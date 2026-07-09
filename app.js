@@ -766,6 +766,7 @@ function renderWeekDetail() {
         </div>
       </div>
     </div>`;
+  setTimeout(() => document.querySelectorAll('.task-text').forEach(autoResize), 0);
 }
 
 function renderTaskItem(t, weekNum) {
