@@ -516,6 +516,17 @@ function renderDashboard() {
   const weeksLeft = state.weeks.filter(w => new Date(w.endDate) >= today).length;
   const aP = trackProgress('astro'), mP = trackProgress('mars');
 
+  const allReports = [];
+  state.weeks.forEach(w => {
+    if (w.reports) {
+      w.reports.forEach(r => {
+        allReports.push({ ...r, weekNum: w.weekNum });
+      });
+    }
+  });
+  allReports.sort((a,b) => new Date(b.uploadedAt) - new Date(a.uploadedAt));
+  const recentReports = allReports.slice(0, 5);
+
   $('dash-body').innerHTML = `
     <div class="dash-grid-3" style="margin-bottom:18px">
       <div class="stat-card">
@@ -557,22 +568,42 @@ function renderDashboard() {
         </div>
       </div>
     </div>
-    <div class="week-current-card">
-      <div class="week-badge"><svg width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg> Current Week</div>
-      <div class="flex items-center justify-between" style="margin-bottom:12px">
-        <div>
-          <div style="font-size:16px;font-weight:700">Week ${curWeek.weekNum} <span style="color:var(--text3);font-size:13px;font-weight:400">of 26</span></div>
-          <div class="week-dates">${fmtWeekRange(curWeek)}</div>
+    <div class="dash-grid">
+      <div class="week-current-card">
+        <div class="week-badge"><svg width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg> Current Week</div>
+        <div class="flex items-center justify-between" style="margin-bottom:12px">
+          <div>
+            <div style="font-size:16px;font-weight:700">Week ${curWeek.weekNum} <span style="color:var(--text3);font-size:13px;font-weight:400">of 26</span></div>
+            <div class="week-dates">${fmtWeekRange(curWeek)}</div>
+          </div>
+          <button class="btn btn-ghost btn-sm" onclick="navigate('planner')">View All Tasks →</button>
         </div>
-        <button class="btn btn-ghost btn-sm" onclick="navigate('planner')">View All Tasks →</button>
+        ${curWeek.tasks.slice(0,5).map(t=>`
+          <div class="task-preview">
+            <div class="task-preview-dot" style="background:${t.track==='astro'?'var(--astro)':t.track==='mars'?'var(--mars)':'var(--accent)'}"></div>
+            <span style="font-size:13px;color:${t.done?'var(--text3)':'var(--text2)'};${t.done?'text-decoration:line-through':''}">${t.text}</span>
+            ${t.done?'<span class="badge badge-astro" style="margin-left:auto;flex-shrink:0;font-size:9px">done</span>':''}
+          </div>`).join('')}
+        ${curWeek.tasks.length > 5 ? `<div style="font-size:11px;color:var(--text3);margin-top:8px">+${curWeek.tasks.length-5} more tasks this week</div>` : ''}
       </div>
-      ${curWeek.tasks.slice(0,5).map(t=>`
-        <div class="task-preview">
-          <div class="task-preview-dot" style="background:${t.track==='astro'?'var(--astro)':t.track==='mars'?'var(--mars)':'var(--accent)'}"></div>
-          <span style="font-size:13px;color:${t.done?'var(--text3)':'var(--text2)'};${t.done?'text-decoration:line-through':''}">${t.text}</span>
-          ${t.done?'<span class="badge badge-astro" style="margin-left:auto;flex-shrink:0;font-size:9px">done</span>':''}
-        </div>`).join('')}
-      ${curWeek.tasks.length > 5 ? `<div style="font-size:11px;color:var(--text3);margin-top:8px">+${curWeek.tasks.length-5} more tasks this week</div>` : ''}
+      
+      <div class="week-current-card">
+        <div class="week-badge">
+          <svg width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg> 
+          Recent Weekly Reports
+        </div>
+        <div class="flex items-center justify-between" style="margin-bottom:12px">
+          <div>
+            <div style="font-size:16px;font-weight:700">Latest Uploads</div>
+          </div>
+          <button class="btn btn-ghost btn-sm" onclick="navigate('planner')">View Planner →</button>
+        </div>
+        ${recentReports.length ? recentReports.map(r => `
+          <div class="task-preview" style="cursor:pointer" onclick="navigate('planner'); selectWeek(${r.weekNum}); setTimeout(() => { const el = document.getElementById('reports-${r.track}-${r.weekNum}'); if(el) el.scrollIntoView({behavior: 'smooth', block: 'center'}); }, 100);" title="Go to Week ${r.weekNum}">
+            <div class="task-preview-dot" style="background:${r.track==='astro'?'var(--astro)':'var(--mars)'}"></div>
+            <span style="font-size:13px;color:var(--text);flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${r.name} <span style="color:var(--text3);font-size:11px;margin-left:4px;">(Week ${r.weekNum})</span></span>
+          </div>`).join('') : '<div style="font-size:13px;color:var(--text3);">No reports uploaded yet.</div>'}
+      </div>
     </div>`;
 }
 
