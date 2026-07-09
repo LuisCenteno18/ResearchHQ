@@ -656,7 +656,7 @@ function renderWeekDetail() {
   tracks.forEach(tr => {
     const tasks = w.tasks.filter(t => t.track === tr.key);
     if (!tasks.length) return;
-    taskHTML += `<div style="margin-bottom:16px">
+    taskHTML += `<div>
       <div class="flex items-center gap-2" style="margin-bottom:8px">
         <span class="badge ${tr.badge}">${tr.label}</span>
         <span style="font-size:11px;color:var(--text3)">${tasks.filter(t=>t.done).length}/${tasks.length}</span>
@@ -703,7 +703,7 @@ function renderWeekDetail() {
     </div>
     <div class="progress-bar" style="margin-bottom:16px"><div class="progress-bar-fill" style="width:${pct}%;background:${phase.color}"></div></div>
     ${eventsHTML}
-    ${taskHTML || '<div class="empty-state"><div class="empty-state-icon">📋</div><div class="empty-state-text">No tasks yet</div><div class="empty-state-sub">Add one below</div></div>'}
+    ${taskHTML ? `<div class="dash-grid" style="align-items:start; margin-bottom:16px;">${taskHTML}</div>` : '<div class="empty-state"><div class="empty-state-icon">📋</div><div class="empty-state-text">No tasks yet</div><div class="empty-state-sub">Add one below</div></div>'}
     <div class="add-task-row">
       <input id="new-task-text" class="add-task-input" placeholder="Add a new task…" onkeydown="if(event.key==='Enter')addTask()">
       <select id="new-task-track" class="track-select">
