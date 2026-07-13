@@ -1158,6 +1158,7 @@ function openCalModal(id, dateStr) {
     $('cal-ev-start').value = ev.start;
     $('cal-ev-end').value = ev.end || '';
     $('cal-ev-text').value = ev.text;
+    $('cal-ev-highlight').checked = !!ev.important;
     title.textContent = 'Edit Event';
     delBtn.style.display = 'block';
   } else {
@@ -1165,6 +1166,7 @@ function openCalModal(id, dateStr) {
     $('cal-ev-start').value = dateStr || '';
     $('cal-ev-end').value = '';
     $('cal-ev-text').value = '';
+    $('cal-ev-highlight').checked = false;
     title.textContent = 'Add Event';
     delBtn.style.display = 'none';
   }
@@ -1181,6 +1183,7 @@ function saveCalEvent() {
   const start = $('cal-ev-start').value;
   let end = $('cal-ev-end').value;
   const text = $('cal-ev-text').value.trim();
+  const important = $('cal-ev-highlight').checked;
   
   if (!start || !text) {
     toast('Start date and text are required', 'error');
@@ -1197,9 +1200,10 @@ function saveCalEvent() {
       ev.start = start;
       ev.end = end;
       ev.text = text;
+      ev.important = important;
     }
   } else {
-    state.calEvents.push({ id: UID(), start, end, text });
+    state.calEvents.push({ id: UID(), start, end, text, important });
   }
   
   save();
@@ -1254,13 +1258,16 @@ function renderCalGrid() {
   for (let d = 1; d <= daysInMonth; d++) {
     const dateStr = `${year}-${String(calMonth+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
     const isToday = today.getFullYear()===year && today.getMonth()===calMonth && today.getDate()===d;
+    const dayOfWeek = (firstDay + d - 1) % 7;
+    const isWeekend = (dayOfWeek === 0 || dayOfWeek === 6);
+    const weekendClass = isWeekend ? ' weekend' : '';
     const tasks = taskMap[dateStr] || [];
     const evs = eventMap[dateStr] || [];
-    html += `<div class="cal-day${isToday?' today':''}" title="${tasks.length} tasks" onclick="openCalModal(null, '${dateStr}')">
+    html += `<div class="cal-day${isToday?' today':''}${weekendClass}" title="${tasks.length} tasks" onclick="openCalModal(null, '${dateStr}')">
       <div class="cal-day-num">${d}</div>
       <div style="margin-top:4px">
         ${evs.map(ev => {
-          const isHL = (ev.id === highlightedEventId);
+          const isHL = (ev.id === highlightedEventId || ev.important);
           const style = isHL ? 'background:var(--accent);border:1px solid var(--accent);color:#fff;box-shadow:0 0 0 2px var(--surface),0 0 0 3px var(--accent)' : 'background:var(--surface2);border:1px solid var(--border);color:var(--text2)';
           return `<div class="cal-task-chip" style="${style}" title="${ev.text}" onclick="event.stopPropagation(); openCalModal('${ev.id}')">${ev.text}</div>`;
         }).join('')}

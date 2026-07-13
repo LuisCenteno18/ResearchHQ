@@ -387,6 +387,8 @@ body { font-family: 'Inter', sans-serif; background: var(--bg); color: var(--tex
 }
 .cal-day:hover { border-color: rgba(255,255,255,0.15); }
 .cal-day.empty { background: transparent; border-color: transparent; cursor: default; }
+.cal-day.weekend { background: var(--bg); }
+.cal-day.weekend .cal-day-num { opacity: 0.5; }
 .cal-day.today { border-color: var(--accent); }
 .cal-day-num { font-size: 11px; color: var(--text3); font-family: 'JetBrains Mono', monospace; margin-bottom: 4px; }
 .cal-day.today .cal-day-num { color: var(--accent); font-weight: 700; }
