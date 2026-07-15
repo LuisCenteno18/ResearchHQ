@@ -1158,6 +1158,7 @@ function openCalModal(id, dateStr) {
     $('cal-ev-start').value = ev.start;
     $('cal-ev-end').value = ev.end || '';
     $('cal-ev-text').value = ev.text;
+    $('cal-ev-notes').value = ev.notes || '';
     $('cal-ev-highlight').checked = !!ev.important;
     title.textContent = 'Edit Event';
     delBtn.style.display = 'block';
@@ -1166,6 +1167,7 @@ function openCalModal(id, dateStr) {
     $('cal-ev-start').value = dateStr || '';
     $('cal-ev-end').value = '';
     $('cal-ev-text').value = '';
+    $('cal-ev-notes').value = '';
     $('cal-ev-highlight').checked = false;
     title.textContent = 'Add Event';
     delBtn.style.display = 'none';
@@ -1183,6 +1185,7 @@ function saveCalEvent() {
   const start = $('cal-ev-start').value;
   let end = $('cal-ev-end').value;
   const text = $('cal-ev-text').value.trim();
+  const notes = $('cal-ev-notes').value.trim();
   const important = $('cal-ev-highlight').checked;
   
   if (!start || !text) {
@@ -1200,10 +1203,11 @@ function saveCalEvent() {
       ev.start = start;
       ev.end = end;
       ev.text = text;
+      ev.notes = notes;
       ev.important = important;
     }
   } else {
-    state.calEvents.push({ id: UID(), start, end, text, important });
+    state.calEvents.push({ id: UID(), start, end, text, notes, important });
   }
   
   save();
